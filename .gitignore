@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+research/artifacts/
+research/corpus/
+*.spec
+evidence/
+release/
+.env
+.env.*
+*.log
+research/*.json
+!research/corpus-sources.json

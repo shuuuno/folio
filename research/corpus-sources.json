@@ -1,0 +1,29 @@
+[
+  {
+    "file": "korean-curriculum.pdf",
+    "title": "National Institute of Korean Language, Korean Standard Curriculum (2020)",
+    "url": "https://m.korean.go.kr/front/etcData/etcDataView.do?etc_seq=657",
+    "rights": "KOGL Type 1 attribution",
+    "sha256": "36c081024c26854c9660c59960a2a28fc9b0db6c1bf48469417447dce975ff68",
+    "pages": 40,
+    "retrieved": "2026-11-04"
+  },
+  {
+    "file": "hog-manual-bilingual.pdf",
+    "title": "Korea Pork Producers Association, Hog Farm Management Manual (2016), contract appendix PDF pages 97-98",
+    "url": "https://www.koreapork.or.kr/upload/2016_english.pdf",
+    "rights": "Public download; not redistributed with app",
+    "sha256": "94ab8a3649170aeb8091e989f084aea1ba6dee119e55d3ef821064e0e5c34b26",
+    "pages": 106,
+    "retrieved": "2026-11-04"
+  },
+  {
+    "file": "archives-declaration.pdf",
+    "title": "US National Archives, Declaration of Independence scan",
+    "url": "https://www.archives.gov/files/founding-docs/declaration-of-independence.pdf",
+    "rights": "Public archival scan; not redistributed with app",
+    "sha256": "8fde9ace63d20a3bb0ac5ccab805b7060ed74ec33cf0b6f127bcd70f91dbab2e",
+    "pages": 2,
+    "retrieved": "2026-11-04"
+  }
+]
