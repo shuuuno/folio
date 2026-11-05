@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, QTimer
 from PySide6.QtWidgets import QApplication
 from paperlight.workspace import Workspace
 from paperlight.instance import InstanceServer
@@ -90,8 +90,18 @@ class WorkspaceTests(unittest.TestCase):
         self.assertIn("트레이 작업", self.window.current.model.doc[0].get_text())
 
     def test_instance_forwards_real_second_process(self):
+        self.check_forwarding(False)
+
+    def test_instance_waits_for_primary_startup(self):
+        self.check_forwarding(True)
+
+    def check_forwarding(self, delayed):
         server = InstanceServer(self.root / "ipc")
-        self.assertTrue(server.start_or_forward([]))
+        if delayed:
+            self.assertTrue(server.lock.tryLock(0))
+            QTimer.singleShot(1500, lambda: server.server.listen(server.name))
+        else:
+            self.assertTrue(server.start_or_forward([]))
         received = []
         server.requested.connect(received.append)
         code = "from PySide6.QtCore import QCoreApplication; from paperlight.instance import InstanceServer; import sys; app=QCoreApplication([]); s=InstanceServer(sys.argv[1]); assert not s.start_or_forward([sys.argv[2]])"

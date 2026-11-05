@@ -1,8 +1,9 @@
 """같은 사용자 앱으로 파일 열기를 전달한다. 검증에서는 별도 이름을 쓴다."""
 import hashlib
 import json
+import time
 from pathlib import Path
-from PySide6.QtCore import QObject, Signal, QLockFile, QStandardPaths
+from PySide6.QtCore import QObject, Signal, QLockFile, QStandardPaths, QThread
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 
 
@@ -24,13 +25,21 @@ class InstanceServer(QObject):
     def start_or_forward(self, paths):
         if not self.lock.tryLock(0):
             socket = QLocalSocket()
-            socket.connectToServer(self.name)
-            if not socket.waitForConnected(3000):
+            deadline = time.monotonic() + 20
+            connected = False
+            while time.monotonic() < deadline:
+                socket.abort()
+                socket.connectToServer(self.name)
+                if socket.state() == QLocalSocket.LocalSocketState.ConnectedState or socket.waitForConnected(500):
+                    connected = True
+                    break
+                QThread.msleep(100)
+            if not connected:
                 raise RuntimeError("실행 중인 Paperlight에 연결하지 못했습니다. 잠시 후 다시 열어 주세요.")
             socket.write(json.dumps([str(Path(p).resolve()) for p in paths]).encode() + b"\n")
             if socket.bytesToWrite() and not socket.waitForBytesWritten(3000):
                 raise RuntimeError("열기 요청을 전달하지 못했습니다.")
-            if not socket.bytesAvailable() and not socket.waitForReadyRead(5000):
+            if not socket.bytesAvailable() and not socket.waitForReadyRead(20000):
                 raise RuntimeError("열기 요청의 수신을 확인하지 못했습니다. 앱이 바쁘면 잠시 후 다시 시도하세요.")
             if bytes(socket.readAll()) != b"ok\n":
                 raise RuntimeError("올바르지 않은 앱 응답입니다.")

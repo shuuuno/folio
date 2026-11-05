@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -10,7 +11,7 @@ import traceback
 
 def verify(output, native=False):
     os.environ["QT_QPA_PLATFORM"] = "windows" if native else "offscreen"
-    from PySide6.QtCore import QSettings
+    from PySide6.QtCore import QSettings, QTimer
     from PySide6.QtWidgets import QApplication, QSystemTrayIcon
     from .workspace import Workspace
     from . import __version__
@@ -54,6 +55,28 @@ def verify(output, native=False):
         from pptx import Presentation
         assert len(Presentation(dialog.outputs[0]).slides) == 2
         result["conversion_worker_completed"] = True
+        from .instance import InstanceServer
+        instance = InstanceServer(output / "ipc")
+        assert instance.lock.tryLock(0)
+        received = []
+        instance.requested.connect(received.append)
+        # 주 실행 파일이 아직 파이프를 만들기 전의 동시 실행을 재현한다.
+        QTimer.singleShot(1500, lambda: instance.server.listen(instance.name))
+        command = [sys.executable] + ([] if getattr(sys, "frozen", False) else ["-m", "paperlight"])
+        command += ["--verify-ipc-client", str(output / "ipc"), str(first)]
+        child = subprocess.Popen(command, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        try:
+            deadline = time.monotonic() + 25
+            while child.poll() is None and time.monotonic() < deadline:
+                app.processEvents()
+                time.sleep(.02)
+            assert child.poll() == 0 and received == [[str(first)]], "시작 중 파일 전달 실패"
+            result["second_process_waited_for_startup_and_forwarded"] = True
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait(timeout=10)
+            instance.close()
         dialog.hide()
         app.processEvents()
         window.grab().save(str(output / "tabs.png"))

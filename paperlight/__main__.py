@@ -8,6 +8,12 @@ from .window import MainWindow
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--verify-ipc-client":
+        from PySide6.QtCore import QCoreApplication
+        from .instance import InstanceServer
+        app = QCoreApplication([])
+        server = InstanceServer(Path(sys.argv[2]))
+        sys.exit(1 if server.start_or_forward([sys.argv[3]]) else 0)
     if len(sys.argv) == 4 and sys.argv[1] == "--convert-worker":
         from .conversion import worker
         sys.exit(worker(Path(sys.argv[2]), Path(sys.argv[3])))
@@ -39,7 +45,7 @@ def main():
             return
     except Exception as exc:
         QMessageBox.warning(None, "Paperlight 실행", str(exc))
-        return
+        sys.exit(1)
     window = Workspace()
     instance.requested.connect(window.open_files)
     app.aboutToQuit.connect(instance.close)
