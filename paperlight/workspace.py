@@ -11,6 +11,7 @@ from .style import STYLE
 from .icons import icon
 from .theme import install_theme
 from .chrome import DocumentTabs, WindowBar, resize_hit
+from . import DISPLAY_NAME
 
 
 class Workspace(QMainWindow):
@@ -68,7 +69,7 @@ class Workspace(QMainWindow):
         row.addWidget(options)
         layout.addWidget(header)
         layout.addWidget(self.tabs, 1)
-        self.setWindowTitle("Paperlight")
+        self.setWindowTitle(DISPLAY_NAME)
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets/paperlight.ico")))
         self.resize(1400, 960)
         self.setMinimumSize(1050, 760)
@@ -96,9 +97,9 @@ class Workspace(QMainWindow):
         self.tray = None
         if tray_enabled and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
-            self.tray.setToolTip("Paperlight")
+            self.tray.setToolTip(DISPLAY_NAME)
             menu = QMenu(self)
-            menu.addAction("Paperlight 열기", self.reveal)
+            menu.addAction(f"{DISPLAY_NAME} 열기", self.reveal)
             menu.addAction("PDF 열기…", self.open_from_tray)
             menu.addAction("파일 변환…", self.show_conversion)
             menu.addSeparator()
@@ -225,7 +226,7 @@ class Workspace(QMainWindow):
             self.tabs.widget(i).checkpoint_recovery()
         self.hide()
         if not self.settings.value("trayHintShown", False, type=bool):
-            self.tray.showMessage("Paperlight", "트레이에서 다시 열 수 있습니다. 종료하려면 ‘완전히 종료’를 선택하세요.")
+            self.tray.showMessage(DISPLAY_NAME, "트레이에서 다시 열 수 있습니다. 종료하려면 ‘완전히 종료’를 선택하세요.")
             self.settings.setValue("trayHintShown", True)
         return True
 

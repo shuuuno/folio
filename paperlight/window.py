@@ -23,6 +23,7 @@ from .signature import SignatureDialog
 from .style import STYLE
 from .icons import icon
 from .theme import install_theme
+from . import DISPLAY_NAME
 from .selection import TextSelection
 from .recovery import RecoveryStore, RecoveryDialog
 
@@ -382,7 +383,7 @@ class MainWindow(QMainWindow):
         self._recovery_store = None
         self._recovery_key = None
         self._recovery_busy = False
-        self.setWindowTitle("Paperlight")
+        self.setWindowTitle(DISPLAY_NAME)
         self.resize(1360, 900)
         self.setMinimumSize(1020, 700)
         install_theme()
@@ -427,7 +428,7 @@ class MainWindow(QMainWindow):
         header.setObjectName("header")
         row = QHBoxLayout(header)
         row.setContentsMargins(20, 10, 20, 10)
-        brand = QLabel("Paperlight")
+        brand = QLabel(DISPLAY_NAME)
         brand.setObjectName("brand")
         row.addWidget(brand)
         row.addSpacing(25)
@@ -1308,7 +1309,7 @@ class MainWindow(QMainWindow):
         self.save_state.setText("읽기 전용 문서" if opened and not self.model.editable else
                                "적용 전 입력이 있습니다" if self.has_draft else
                                "저장하지 않은 변경 사항" if self.model.dirty else "내 PC에서만 처리")
-        self.setWindowTitle((self.model.path.name + (" *" if self.model.dirty or self.has_draft else "") + " — " if opened else "") + "Paperlight")
+        self.setWindowTitle((self.model.path.name + (" *" if self.model.dirty or self.has_draft else "") + " — " if opened else "") + DISPLAY_NAME)
 
     def change_zoom(self, factor):
         if not self.model.doc:

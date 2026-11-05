@@ -5,6 +5,7 @@ STYLE = """
 * { font-family: 'Pretendard Variable', 'Malgun Gothic'; font-size: 13px; color: @ink; }
 QMainWindow, QDialog { background: @surface; }
 QWidget#windowBar { background: #F1F3F8; }
+QLabel#wordmark { font-size: 23px; font-weight: 600; color: @accent; }
 QToolButton#windowControl, QToolButton#windowClose { border: 0; border-radius: 0; padding: 0; }
 QToolButton#windowClose:hover { background: #FBDDE0; }
 QTabBar#documentTabs { background: transparent; }

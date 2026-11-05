@@ -1,5 +1,6 @@
 """격리된 합성 문서로 자동 저장 후 프로세스 종료·재실행을 검증한다."""
 from hashlib import sha256
+from .theme import create_application
 import json
 import os
 from pathlib import Path
@@ -12,11 +13,10 @@ import traceback
 
 def worker(output):
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import QTimer
     import pymupdf as fitz
     from .window import MainWindow
-    app = QApplication([])
+    app = create_application([])
     app.setApplicationName("PaperlightRecoveryCheck")
     window = MainWindow()
     window.data_dir = output / "test-appdata"
@@ -48,7 +48,6 @@ def worker(output):
 
 def verify(output, native=False):
     os.environ["QT_QPA_PLATFORM"] = "windows" if native else "offscreen"
-    from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import QTimer, QEventLoop
     import pymupdf as fitz
     from .window import MainWindow
@@ -56,7 +55,7 @@ def verify(output, native=False):
     from . import __version__
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    app = QApplication([])
+    app = create_application([])
     app.setStyle("Fusion")
     app.setApplicationName("PaperlightRecoveryCheck")
     root = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1] / "assets"

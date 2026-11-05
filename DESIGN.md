@@ -1,5 +1,5 @@
 ---
-name: Paperlight
+name: Folio
 description: 문서에 시선을 모으는 밝고 미니멀한 Windows PDF 작업 공간
 colors:
   ink: "#202A3B"
@@ -27,6 +27,10 @@ colors:
   document-tab-hover: "#E6EAF2"
   window-close-hover: "#FBDDE0"
 typography:
+  wordmark:
+    fontFamily: "Pretendard Variable, Malgun Gothic"
+    fontSize: "23px"
+    fontWeight: 600
   headline:
     fontFamily: "Pretendard Variable, Malgun Gothic"
     fontSize: "30px"
@@ -57,6 +61,10 @@ spacing:
   header-gap: "10px"
   inspector: "18px"
 components:
+  wordmark:
+    textColor: "{colors.accent}"
+    typography: "{typography.wordmark}"
+    width: "84px"
   button-primary:
     backgroundColor: "{colors.accent}"
     textColor: "{colors.surface}"
@@ -120,7 +128,7 @@ components:
     height: "44px"
 ---
 
-# Design System: Paperlight
+# Design System: Folio
 
 ## Overview
 
@@ -135,7 +143,9 @@ components:
 - 선택·저장·적용을 구분하는 파란 상태색.
 - 즉시 반응하는 Windows 네이티브 위젯.
 
-기준 구현은 `paperlight/theme.py`, `style.py`, `icons.py`, `chrome.py`, `workspace.py`, `window.py`다. 이 문서는 구현된 재사용 규칙을 기록한다. 화면별 구성은 `.impeccable/surfaces/workspace.md`에 둔다.
+표시 제품명은 Folio이며 창 제목·트레이에도 같은 이름을 쓴다. 기존 데이터·IPC·설치 식별자인 Paperlight와 Python 패키지 경로는 유지한다. PDF 안의 기존 콘텐츠는 브랜드 변경 대상이 아니다.
+
+기준 구현은 `paperlight/theme.py`, `style.py`, `icons.py`, `chrome.py`, `workspace.py`, `window.py`와 앱 시작점 `__main__.py`다. 이 문서는 구현된 재사용 규칙을 기록한다. 화면별 구성은 `.impeccable/surfaces/workspace.md`에 둔다. 확인한 소스의 SHA-256은 `.impeccable/design.json`의 `extensions.native.sourceHashes`에 기록한다.
 
 ## Colors
 
@@ -149,11 +159,13 @@ components:
 
 배포에 포함한 `assets/fonts/PretendardVariable.ttf`를 Qt에 등록한다. 스타일의 대체 글꼴은 맑은 고딕이다. UI 글꼴과 PDF 내부의 편집 글꼴은 별개다.
 
-`headline`은 시작 화면 제목, `title`은 속성 패널 제목, `introduction`은 시작 안내, `body`는 조작부, `label`은 보조 설명, `compact`는 도구막대·상태 표시줄에 쓴다. 통합 작업 창의 상단에는 큰 제품명 라벨을 반복하지 않는다. 주요 버튼은 굵기 600, 속성 캡션은 550이다. 행간과 자간을 별도로 지정하지 않으며 Qt의 글꼴 계측을 따른다.
+Windows에서 Qt 플랫폼이 미지정 또는 `windows`일 때 QApplication 생성 인수에 `windows:fontengine=freetype`를 지정한다. 기본 13px 글꼴에 `PreferAntialias`와 `PreferVerticalHinting`을 적용한다. 이는 앱 안의 글자 렌더링 설정이며 Windows 전체 글꼴 설정은 바꾸지 않는다. HTML/CSS 표본은 이 네이티브 렌더러의 결과를 재현하거나 검증하지 않는다.
+
+`wordmark`는 제목줄의 Folio 라벨, `headline`은 시작 화면 제목, `title`은 속성 패널 제목, `introduction`은 시작 안내, `body`는 메뉴·탭·버튼을 포함한 조작부, `label`은 보조 설명, `compact`는 도구막대·상태 표시줄에 쓴다. 통합 작업 창의 브랜드 라벨은 한 번만 표시한다. 주요 버튼은 굵기 600, 속성 캡션은 550이다. 행간과 자간을 별도로 지정하지 않으며 Qt의 글꼴 계측을 따른다.
 
 ## Layout
 
-Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 1400×960, 최소 창은 1050×760이다. 최상단은 Windows 제목줄과 문서 탭을 합친 `window-bar`다. 왼쪽 8px 여백부터 문서 탭, 바로 옆 34×32px 파일 추가 버튼, 빈 이동 영역, 오른쪽 최소화·최대화·닫기 순으로 놓인다. 파일 추가 뒤에는 최소 80px의 빈 영역을 남긴다. 큰 제품명 배너나 별도 OS 제목줄을 중복 표시하지 않는다.
+Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 1400×960, 최소 창은 1050×760이다. 최상단은 Windows 제목줄과 문서 탭을 합친 `window-bar`다. 왼쪽 8px 여백부터 고정 너비의 Folio 워드마크, 문서 탭, 바로 옆 34×32px 파일 추가 버튼, 빈 이동 영역, 오른쪽 최소화·최대화·닫기 순으로 놓인다. 워드마크는 라벨 안에서 가로·세로 가운데 정렬한다. 파일 추가 뒤에는 최소 80px의 빈 영역을 남긴다. 별도 제품명 배너나 OS 제목줄을 중복 표시하지 않는다.
 
 그 아래 파일·열기·변환·저장 헤더, 문서 도구줄과 작업 공간이 놓인다. 헤더의 내부 여백은 왼쪽 20·위아래 10·오른쪽 18px이며 요소 간격은 `header-gap`이다.
 
@@ -173,6 +185,7 @@ Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 1400×96
 
 ## Components
 
+- **워드마크:** `QLabel`로 그리는 Folio 글자이며 이미지 로고가 아니다. `wordmark`의 글꼴·너비와 `accent` 색을 사용한다. 마우스 이벤트를 통과시켜 제목줄의 창 이동을 방해하지 않는다.
 - **주요 버튼:** 파란 바탕·흰 글자. hover, pressed, disabled 색을 각각 갖고 키보드 포커스는 테두리로 표시한다.
 - **일반·보조·삭제 버튼:** 일반은 투명, 보조는 흰 바탕과 경계선, 삭제는 붉은 글자다. 일반 hover·pressed는 중립색, 삭제 hover는 연한 붉은 배경이다. 비활성 상태는 흐린 글자로 구분한다.
 - **입력:** 흰 바탕과 경계선, hover 시 경계 강화, focus 시 파란 테두리다. 검색 입력은 평상시 `chrome`, focus 시 흰 바탕이다. 스핀 입력은 오른쪽 상하 버튼을 유지한다.

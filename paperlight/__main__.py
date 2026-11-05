@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
-from . import __version__
+from . import __version__, DISPLAY_NAME
+from .theme import create_application
 from .window import MainWindow
 
 
@@ -29,9 +29,10 @@ def main():
     if len(sys.argv) == 3 and sys.argv[1] in ("--verify-build", "--verify-build-native"):
         from .verify_build import verify
         sys.exit(verify(Path(sys.argv[2]), native=sys.argv[1] == "--verify-build-native"))
-    app = QApplication(sys.argv)
+    app = create_application(sys.argv)
     app.setStyle("Fusion")
     app.setApplicationName("Paperlight")
+    app.setApplicationDisplayName(DISPLAY_NAME)
     app.setOrganizationName("Paperlight")
     app.setApplicationVersion(__version__)
     app.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets" / "paperlight.ico")))
@@ -44,7 +45,7 @@ def main():
         if not instance.start_or_forward(paths):
             return
     except Exception as exc:
-        QMessageBox.warning(None, "Paperlight 실행", str(exc))
+        QMessageBox.warning(None, f"{DISPLAY_NAME} 실행", str(exc))
         sys.exit(1)
     window = Workspace()
     instance.requested.connect(window.open_files)

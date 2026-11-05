@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T02:21:34.012329+00:00",
-  "title": "Design System: Paperlight",
+  "generatedAt": "2026-11-05T02:43:41.504578+00:00",
+  "title": "Design System: Folio",
   "extensions": {
     "colorMeta": {
       "ink": {
@@ -61,6 +61,10 @@
       "compact": {
         "displayName": "작은 조작부",
         "purpose": "도구막대와 상태 표시줄"
+      },
+      "wordmark": {
+        "displayName": "Folio 워드마크",
+        "purpose": "통합 제목줄 왼쪽에 한 번 표시하는 브랜드 라벨"
       }
     },
     "shadows": [
@@ -81,7 +85,9 @@
         "paperlight/icons.py",
         "paperlight/workspace.py",
         "paperlight/window.py",
-        "paperlight/chrome.py"
+        "paperlight/chrome.py",
+        "paperlight/__main__.py",
+        "paperlight/__init__.py"
       ],
       "previewScope": "HTML/CSS는 문서 표본이며 네이티브 위젯·동작 검증이 아니다. SVG는 실제 기하학 경로를 옮겼다. 미구현 색조 단계와 웹 중단점은 생성하지 않는다.",
       "windowChrome": {
@@ -89,7 +95,32 @@
         "drag": "빈 상단 영역에서 startSystemMove; 더블클릭은 최대화·복원",
         "resize": "WM_NCHITTEST 물리 화면 좌표; round(6 × devicePixelRatioF()) 폭; 최대화·전체 화면 제외",
         "close": "owner.close를 호출하여 기존 트레이 설정과 미저장 입력 보호 유지"
-      }
+      },
+      "fontRendering": {
+        "applicationCreation": "Windows이고 QT_QPA_PLATFORM이 미지정 또는 windows일 때 QApplication 인수에 -platform windows:fontengine=freetype 지정",
+        "styleStrategy": "QFont.PreferAntialias",
+        "hintingPreference": "QFont.PreferVerticalHinting",
+        "scope": "앱 글자 렌더러만 변경하며 Windows 전체 글꼴 설정은 변경하지 않는다. HTML/CSS 표본으로 이 결과를 재현하지 않는다."
+      },
+      "branding": {
+        "displayName": "Folio",
+        "internalIdentity": "Paperlight",
+        "scope": "창 제목·트레이·단일 제목줄 워드마크는 Folio. 데이터·IPC·설치 식별자와 Python 패키지 경로는 유지한다."
+      },
+      "sourceHashes": {
+        "paperlight/theme.py": "299e37b0a1afd371ae84251cc643b1a7d0f5a859513cd71e7e59518410331a7a",
+        "paperlight/style.py": "b72c4718a32eefb10f814630ea9a2a0caec0b089b815d2f96d550f5d8ba5449e",
+        "paperlight/icons.py": "a9094b53576087b6f817863cde83f85e66d65552ca481dfb014de3858af84e11",
+        "paperlight/workspace.py": "d3b5d42e363d2951765e03239bbd537c8585d6ed586e30b41ff6907fea031b9f",
+        "paperlight/window.py": "5137136931c84c366fb502b4554620d50a19d039a7de87d56a3545ae211fc043",
+        "paperlight/chrome.py": "423210af1ceffb26533acdd0f4b86bc8b5d2639f447d74384f5401e30e3ee361",
+        "paperlight/__main__.py": "f7fbe7c30d1a2a4432c481a7660f4c5000f9db23916b19c379388e7f4b6e95a1",
+        "paperlight/__init__.py": "29724ec5371c71d4c2d0f5a09d1c09ebd434a94bf3e63e5e872f9c1dc258ebb9"
+      },
+      "evidence": [
+        "evidence/v092-native/compact-selected.png",
+        "evidence/v092-native/empty.png"
+      ]
     }
   },
   "components": [
@@ -161,9 +192,9 @@
       "name": "통합 제목줄",
       "kind": "custom",
       "refersTo": "window-bar",
-      "description": "왼쪽 문서 탭과 인접한 파일 추가, 빈 창 이동 영역, 오른쪽 창 조작부. 문서 표본 버튼은 OS 창을 실제 조작하지 않는다.",
-      "html": "<div class=\"ds-window-bar\"><div class=\"ds-tabs\" role=\"tablist\" aria-label=\"문서\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">검토 문서.pdf</button></div><button class=\"ds-window-add\" aria-label=\"PDF 파일 열기\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12H19M12 5V19\"/></svg></button><div class=\"ds-window-drag\"></div><button class=\"ds-window-control\" aria-label=\"최소화\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12H19\"/></svg></button><button class=\"ds-window-control\" aria-label=\"최대화\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\"/></svg></button><button class=\"ds-window-control ds-window-close\" aria-label=\"창 닫기\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7L17 17M17 7L7 17\"/></svg></button></div>",
-      "css": ".ds-tabs{display:flex;height:44px;background:#F1F3F8}.ds-tab{font-family:\"Pretendard Variable\",\"Malgun Gothic\",sans-serif;font-size:13px;background:transparent;color:#606D83;border:0;border-radius:7px 7px 0 0;margin-top:5px;margin-right:3px;padding:8px 14px;min-width:130px;max-width:220px}.ds-tab[aria-selected=\"true\"]{background:#FFFFFF;color:#24314C}.ds-tab:hover:not([aria-selected=\"true\"]){background:#E6EAF2}.ds-tab:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}.ds-window-bar{display:flex;align-items:center;height:44px;padding-left:8px;background:#F1F3F8}.ds-window-drag{min-width:80px;flex:1}.ds-window-add,.ds-window-control{display:flex;align-items:center;justify-content:center;color:#566176;background:transparent}.ds-window-add{border:1px solid transparent;border-radius:7px;padding:6px;width:34px;height:32px;box-sizing:border-box;flex-shrink:0}.ds-window-control{border:0;border-radius:0;padding:0;width:46px;height:44px;flex-shrink:0}.ds-window-add:hover,.ds-window-control:hover{background:#F0F3F9}.ds-window-add:active,.ds-window-control:active{background:#E5EAF4}.ds-window-close:hover{background:#FBDDE0}.ds-window-add:focus-visible,.ds-window-control:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}"
+      "description": "왼쪽 Folio 워드마크 한 번, 문서 탭과 인접한 파일 추가, 빈 창 이동 영역, 오른쪽 창 조작부. 문서 표본 버튼은 OS 창을 실제 조작하지 않는다.",
+      "html": "<div class=\"ds-window-bar\"><span class=\"ds-wordmark\">Folio</span><div class=\"ds-tabs\" role=\"tablist\" aria-label=\"문서\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">검토 문서.pdf</button></div><button class=\"ds-window-add\" aria-label=\"PDF 파일 열기\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12H19M12 5V19\"/></svg></button><div class=\"ds-window-drag\"></div><button class=\"ds-window-control\" aria-label=\"최소화\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12H19\"/></svg></button><button class=\"ds-window-control\" aria-label=\"최대화\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\"/></svg></button><button class=\"ds-window-control ds-window-close\" aria-label=\"창 닫기\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7L17 17M17 7L7 17\"/></svg></button></div>",
+      "css": ".ds-tabs{display:flex;height:44px;background:#F1F3F8}.ds-tab{font-family:\"Pretendard Variable\",\"Malgun Gothic\",sans-serif;font-size:13px;background:transparent;color:#606D83;border:0;border-radius:7px 7px 0 0;margin-top:5px;margin-right:3px;padding:8px 14px;min-width:130px;max-width:220px}.ds-tab[aria-selected=\"true\"]{background:#FFFFFF;color:#24314C}.ds-tab:hover:not([aria-selected=\"true\"]){background:#E6EAF2}.ds-tab:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}.ds-window-bar{display:flex;align-items:center;height:44px;padding-left:8px;background:#F1F3F8}.ds-window-drag{min-width:80px;flex:1}.ds-window-add,.ds-window-control{display:flex;align-items:center;justify-content:center;color:#566176;background:transparent}.ds-window-add{border:1px solid transparent;border-radius:7px;padding:6px;width:34px;height:32px;box-sizing:border-box;flex-shrink:0}.ds-window-control{border:0;border-radius:0;padding:0;width:46px;height:44px;flex-shrink:0}.ds-window-add:hover,.ds-window-control:hover{background:#F0F3F9}.ds-window-add:active,.ds-window-control:active{background:#E5EAF4}.ds-window-close:hover{background:#FBDDE0}.ds-window-add:focus-visible,.ds-window-control:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px} .ds-wordmark{font-family:\"Pretendard Variable\",\"Malgun Gothic\",sans-serif;font-size:23px;font-weight:600;color:#4361DE;width:84px;flex-shrink:0;align-self:stretch;display:flex;align-items:center;justify-content:center;pointer-events:none}"
     }
   ],
   "narrative": {

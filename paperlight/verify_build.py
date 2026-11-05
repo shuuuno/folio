@@ -1,4 +1,5 @@
 """배포 실행 파일 자체의 offscreen / Windows 네이티브 검증 진입점."""
+from .theme import create_application
 import json
 import os
 from pathlib import Path
@@ -9,7 +10,6 @@ import traceback
 
 def verify(output: Path, native=False):
     os.environ["QT_QPA_PLATFORM"] = "windows" if native else "offscreen"
-    from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import Qt, QTimer, QEventLoop, QMimeData, QUrl, QPoint, QPointF, QSize
     from PySide6.QtGui import QImage, QPainter, QColor, QPen, QInputMethodEvent, QDragEnterEvent, QDropEvent, QIcon
     from .signature import png_bytes
@@ -18,7 +18,7 @@ def verify(output: Path, native=False):
     import pymupdf as fitz
     output.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
-    app = QApplication([])
+    app = create_application([])
     app.setStyle("Fusion")
     app.setApplicationName("Paperlight")
     app.setOrganizationName("Paperlight")

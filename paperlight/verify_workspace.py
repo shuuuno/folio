@@ -1,4 +1,5 @@
 """사용자 문서·설정과 분리한 탭/변환/트레이 실행 파일 점검."""
+from .theme import create_application
 import json
 import os
 from pathlib import Path
@@ -12,12 +13,12 @@ import traceback
 def verify(output, native=False):
     os.environ["QT_QPA_PLATFORM"] = "windows" if native else "offscreen"
     from PySide6.QtCore import QSettings, QTimer
-    from PySide6.QtWidgets import QApplication, QSystemTrayIcon
+    from PySide6.QtWidgets import QSystemTrayIcon
     from .workspace import Workspace
     from . import __version__
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    app = QApplication([])
+    app = create_application([])
     app.setStyle("Fusion")
     app.setApplicationName("PaperlightWorkspaceCheck")
     def settle():

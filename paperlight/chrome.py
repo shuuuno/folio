@@ -2,7 +2,7 @@
 import sys
 
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QTabBar, QStackedWidget, QSizePolicy, QMenu
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QTabBar, QStackedWidget, QSizePolicy, QMenu, QLabel
 from .icons import icon
 
 
@@ -72,6 +72,13 @@ class WindowBar(QWidget):
         row = QHBoxLayout(self)
         row.setContentsMargins(8, 0, 0, 0)
         row.setSpacing(0)
+        self.wordmark = QLabel("Folio")
+        self.wordmark.setObjectName("wordmark")
+        self.wordmark.setAccessibleName("Folio")
+        self.wordmark.setFixedWidth(84)
+        self.wordmark.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.wordmark.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        row.addWidget(self.wordmark)
         row.addWidget(tabs.bar)
         self.add_button = QToolButton()
         self.add_button.setObjectName("iconButton")
