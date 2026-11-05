@@ -4,6 +4,13 @@ from pathlib import Path
 STYLE = """
 * { font-family: 'Pretendard Variable', 'Malgun Gothic'; font-size: 13px; color: @ink; }
 QMainWindow, QDialog { background: @surface; }
+QWidget#windowBar { background: #F1F3F8; }
+QToolButton#windowControl, QToolButton#windowClose { border: 0; border-radius: 0; padding: 0; }
+QToolButton#windowClose:hover { background: #FBDDE0; }
+QTabBar#documentTabs { background: transparent; }
+QTabBar#documentTabs::tab { background: transparent; border: 0; border-top-left-radius: 7px; border-top-right-radius: 7px; margin-top: 5px; margin-right: 3px; padding: 8px 14px; min-width: 130px; max-width: 220px; }
+QTabBar#documentTabs::tab:selected { background: white; }
+QTabBar#documentTabs::tab:hover:!selected { background: #E6EAF2; }
 QWidget#welcome { background: @chrome; }
 QWidget#appHeader, QWidget#header { background: @surface; border-bottom: 1px solid @border; }
 QWidget#tools { background: @surface; border-bottom: 1px solid @border; }

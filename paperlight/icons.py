@@ -65,6 +65,10 @@ def icon(name, color="#566176"):
                 path([(14,6),(8,12),(14,18)])
             elif name == "close":
                 line(7,7,17,17); line(17,7,7,17)
+            elif name == "maximize":
+                painter.drawRect(QRectF(5,5,14,14))
+            elif name == "restore":
+                painter.drawRect(QRectF(4,8,12,12)); path([(8,8),(8,4),(20,4),(20,16),(16,16)])
             elif name == "fit":
                 line(3,5,3,19); line(21,5,21,19); line(6,12,18,12)
                 path([(9,9),(6,12),(9,15)]); path([(15,9),(18,12),(15,15)])

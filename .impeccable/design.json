@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T01:30:38.412356+00:00",
+  "generatedAt": "2026-11-05T02:21:34.012329+00:00",
   "title": "Design System: Paperlight",
   "extensions": {
     "colorMeta": {
@@ -39,6 +39,10 @@
       "danger": {
         "role": "semantic",
         "displayName": "삭제 붉은색"
+      },
+      "window-bar": {
+        "role": "neutral",
+        "displayName": "통합 제목줄 바탕"
       }
     },
     "typographyMeta": {
@@ -48,7 +52,7 @@
       },
       "title": {
         "displayName": "제목",
-        "purpose": "제품명과 속성 패널 제목"
+        "purpose": "속성 패널 제목"
       },
       "body": {
         "displayName": "기본",
@@ -76,9 +80,16 @@
         "paperlight/style.py",
         "paperlight/icons.py",
         "paperlight/workspace.py",
-        "paperlight/window.py"
+        "paperlight/window.py",
+        "paperlight/chrome.py"
       ],
-      "previewScope": "HTML/CSS는 문서 표본이며 네이티브 위젯·동작 검증이 아니다. SVG는 실제 기하학 경로를 옮겼다. 미구현 색조 단계와 웹 중단점은 생성하지 않는다."
+      "previewScope": "HTML/CSS는 문서 표본이며 네이티브 위젯·동작 검증이 아니다. SVG는 실제 기하학 경로를 옮겼다. 미구현 색조 단계와 웹 중단점은 생성하지 않는다.",
+      "windowChrome": {
+        "implementation": "Qt.FramelessWindowHint와 WindowBar",
+        "drag": "빈 상단 영역에서 startSystemMove; 더블클릭은 최대화·복원",
+        "resize": "WM_NCHITTEST 물리 화면 좌표; round(6 × devicePixelRatioF()) 폭; 최대화·전체 화면 제외",
+        "close": "owner.close를 호출하여 기존 트레이 설정과 미저장 입력 보호 유지"
+      }
     }
   },
   "components": [
@@ -142,9 +153,17 @@
       "name": "문서 탭",
       "kind": "nav",
       "refersTo": "document-tab",
-      "description": "선택·비선택 탭의 색과 여백 표본. 실제 Qt 탭은 드래그·닫기·가운데 생략을 지원한다.",
+      "description": "통합 제목줄 안의 문서 탭. 위쪽 모서리·여백·선택·hover 상태 표본이며 실제 Qt는 탭 이동·닫기·가운데 생략·스크롤을 제공한다.",
       "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"문서\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">검토 문서.pdf *</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">새 문서</button></div>",
-      "css": ".ds-tabs{display:flex}.ds-tab{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;background:#F1F3F8;color:#606D83;border:0;border-right:1px solid #E1E5ED;padding:10px 15px;min-width:130px;max-width:230px}.ds-tab[aria-selected=\"true\"]{background:#FFFFFF;color:#24314C}.ds-tab:hover:not([aria-selected=\"true\"]){background:#E9EDF5}.ds-tab:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}"
+      "css": ".ds-tabs{display:flex;height:44px;background:#F1F3F8}.ds-tab{font-family:\"Pretendard Variable\",\"Malgun Gothic\",sans-serif;font-size:13px;background:transparent;color:#606D83;border:0;border-radius:7px 7px 0 0;margin-top:5px;margin-right:3px;padding:8px 14px;min-width:130px;max-width:220px}.ds-tab[aria-selected=\"true\"]{background:#FFFFFF;color:#24314C}.ds-tab:hover:not([aria-selected=\"true\"]){background:#E6EAF2}.ds-tab:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}"
+    },
+    {
+      "name": "통합 제목줄",
+      "kind": "custom",
+      "refersTo": "window-bar",
+      "description": "왼쪽 문서 탭과 인접한 파일 추가, 빈 창 이동 영역, 오른쪽 창 조작부. 문서 표본 버튼은 OS 창을 실제 조작하지 않는다.",
+      "html": "<div class=\"ds-window-bar\"><div class=\"ds-tabs\" role=\"tablist\" aria-label=\"문서\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">검토 문서.pdf</button></div><button class=\"ds-window-add\" aria-label=\"PDF 파일 열기\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12H19M12 5V19\"/></svg></button><div class=\"ds-window-drag\"></div><button class=\"ds-window-control\" aria-label=\"최소화\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12H19\"/></svg></button><button class=\"ds-window-control\" aria-label=\"최대화\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\"/></svg></button><button class=\"ds-window-control ds-window-close\" aria-label=\"창 닫기\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7L17 17M17 7L7 17\"/></svg></button></div>",
+      "css": ".ds-tabs{display:flex;height:44px;background:#F1F3F8}.ds-tab{font-family:\"Pretendard Variable\",\"Malgun Gothic\",sans-serif;font-size:13px;background:transparent;color:#606D83;border:0;border-radius:7px 7px 0 0;margin-top:5px;margin-right:3px;padding:8px 14px;min-width:130px;max-width:220px}.ds-tab[aria-selected=\"true\"]{background:#FFFFFF;color:#24314C}.ds-tab:hover:not([aria-selected=\"true\"]){background:#E6EAF2}.ds-tab:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}.ds-window-bar{display:flex;align-items:center;height:44px;padding-left:8px;background:#F1F3F8}.ds-window-drag{min-width:80px;flex:1}.ds-window-add,.ds-window-control{display:flex;align-items:center;justify-content:center;color:#566176;background:transparent}.ds-window-add{border:1px solid transparent;border-radius:7px;padding:6px;width:34px;height:32px;box-sizing:border-box;flex-shrink:0}.ds-window-control{border:0;border-radius:0;padding:0;width:46px;height:44px;flex-shrink:0}.ds-window-add:hover,.ds-window-control:hover{background:#F0F3F9}.ds-window-add:active,.ds-window-control:active{background:#E5EAF4}.ds-window-close:hover{background:#FBDDE0}.ds-window-add:focus-visible,.ds-window-control:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}"
     }
   ],
   "narrative": {

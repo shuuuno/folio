@@ -121,6 +121,34 @@ def verify(output, native=False):
             result["native_window_visible"] = bool(ctypes.windll.user32.IsWindowVisible(int(window.winId())))
             result["tray_available"] = QSystemTrayIcon.isSystemTrayAvailable()
             assert result["native_window_visible"]
+            from ctypes import wintypes
+            rect = wintypes.RECT()
+            get_rect = ctypes.windll.user32.GetWindowRect
+            get_rect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+            assert get_rect(int(window.winId()), ctypes.byref(rect))
+            send = ctypes.windll.user32.SendMessageW
+            send.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            send.restype = wintypes.LPARAM
+            for x, y, expected in ((rect.left + 2, rect.top + 2, 13),
+                                   (rect.right - 2, rect.top + 2, 14),
+                                   (rect.left + 2, rect.bottom - 2, 16),
+                                   (rect.right - 2, rect.bottom - 2, 17)):
+                assert send(int(window.winId()), 0x84, 0, (y & 0xffff) << 16 | (x & 0xffff)) == expected
+            window.window_bar.maximize_button.click()
+            settle()
+            assert window.isMaximized()
+            assert window.screen().availableGeometry().contains(window.geometry()), "최대화 창이 작업 영역을 벗어남"
+            window.grab().save(str(output / "maximized.png"))
+            window.window_bar.maximize_button.click()
+            settle()
+            assert not window.isMaximized()
+            window.window_bar.minimize_button.click()
+            settle()
+            assert window.isMinimized()
+            window.reveal()
+            settle()
+            assert window.isVisible() and not window.isMinimized()
+            result["integrated_chrome_resize_maximize_minimize_restore"] = True
             if result["tray_available"]:
                 assert window.hide_to_tray() and not window.isVisible()
                 assert first_tab._recovery_store.path.exists()

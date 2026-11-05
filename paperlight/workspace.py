@@ -1,48 +1,42 @@
 """문서별 편집 상태를 보존하는 탭 창과 트레이."""
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QSettings, QUrl, QSize
+from PySide6.QtCore import Qt, QSettings, QUrl, QSize, QEvent
 from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
-from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QToolButton,
+from PySide6.QtWidgets import (QApplication, QMainWindow, QToolButton,
                               QSystemTrayIcon, QMenu, QMessageBox, QWidget, QVBoxLayout,
                               QHBoxLayout, QLabel, QPushButton, QTabBar)
 from .window import MainWindow
 from .style import STYLE
 from .icons import icon
 from .theme import install_theme
+from .chrome import DocumentTabs, WindowBar, resize_hit
 
 
 class Workspace(QMainWindow):
     def __init__(self, *, data_dir=None, settings=None, tray_enabled=True):
         super().__init__()
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         install_theme()
         self.data_dir = data_dir
         self.settings = settings if settings is not None else QSettings()
         self.exiting = False
         self.conversion_dialog = None
-        self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
-        self.tabs.setTabsClosable(True)
-        self.tabs.setMovable(True)
-        self.tabs.tabCloseRequested.connect(self.close_tab)
+        self.tabs = DocumentTabs()
+        self.tabs.tabBar().tabCloseRequested.connect(self.close_tab)
         self.tabs.currentChanged.connect(self.active_changed)
         root = QWidget()
         layout = QVBoxLayout(root)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setCentralWidget(root)
+        self.window_bar = WindowBar(self, self.tabs, lambda: self.current.open_dialog())
+        layout.addWidget(self.window_bar)
         header = QWidget()
         header.setObjectName("appHeader")
         row = QHBoxLayout(header)
         row.setContentsMargins(20, 10, 18, 10)
         row.setSpacing(10)
-        mark = QLabel()
-        mark.setPixmap(icon("file", "#4361DE").pixmap(QSize(24, 24)))
-        row.addWidget(mark)
-        brand = QLabel("Paperlight")
-        brand.setObjectName("brand")
-        row.addWidget(brand)
-        row.addSpacing(18)
         file_button = QToolButton()
         file_button.setText("파일")
         file_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -79,16 +73,6 @@ class Workspace(QMainWindow):
         self.resize(1400, 960)
         self.setMinimumSize(1050, 760)
         self.setStyleSheet(STYLE)
-        self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideMiddle)
-        self.tabs.tabBar().setExpanding(False)
-        add = QToolButton()
-        add.setObjectName("iconButton")
-        add.setIcon(icon("plus"))
-        add.setToolTip("PDF 파일 열기 · Ctrl+O")
-        add.setAccessibleName("PDF 파일 열기")
-        add.setFixedSize(40, 38)
-        add.clicked.connect(lambda: self.current.open_dialog())
-        self.tabs.setCornerWidget(add)
         files = QMenu(self)
         file_button.setMenu(files)
         files.addAction("PDF 여러 개 열기", lambda: self.current.open_dialog())
@@ -129,6 +113,21 @@ class Workspace(QMainWindow):
                                      self.tabs.setCurrentIndex((self.tabs.currentIndex() + delta) % self.tabs.count()))
             self.addAction(action)
         self.new_tab()
+        system_menu = QAction(self)
+        system_menu.setShortcut(QKeySequence("Alt+Space"))
+        system_menu.triggered.connect(lambda: self.window_bar.show_system_menu())
+        self.addAction(system_menu)
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.WindowStateChange and hasattr(self, "window_bar"):
+            self.window_bar.sync_state()
+
+    def nativeEvent(self, event_type, message):
+        hit = resize_hit(self, message)
+        if hit is not None:
+            return True, hit
+        return super().nativeEvent(event_type, message)
 
     @property
     def current(self):

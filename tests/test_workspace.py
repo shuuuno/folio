@@ -9,7 +9,8 @@ import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-from PySide6.QtCore import QSettings, QTimer
+from PySide6.QtCore import QSettings, QTimer, Qt, QPoint
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QTabBar
 from paperlight.workspace import Workspace
 from paperlight.instance import InstanceServer
@@ -107,6 +108,42 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(editor.sidebar.isHidden())
         editor.sidebar_button.click()
         self.assertFalse(editor.sidebar.isHidden())
+
+    def test_titlebar_controls_and_active_tab_reorder(self):
+        self.window.open_files([self.a, self.b])
+        self.window.tabs.setCurrentIndex(0)
+        active = self.window.current
+        self.window.tabs.tabBar().moveTab(0, 1)
+        self.assertIs(self.window.current, active)
+        self.assertEqual(self.window.tabs.currentIndex(), 1)
+        self.assertEqual(self.window.tabs.tabBar().currentIndex(), 1)
+        self.window.window_bar.maximize_button.click()
+        self.assertTrue(self.window.isMaximized())
+        self.assertEqual(self.window.window_bar.maximize_button.accessibleName(), "이전 크기로 복원")
+        self.window.window_bar.maximize_button.click()
+        self.assertFalse(self.window.isMaximized())
+        QTest.mouseDClick(self.window.window_bar, Qt.MouseButton.LeftButton, pos=QPoint(700, 22))
+        self.assertTrue(self.window.isMaximized())
+        self.window.showNormal()
+        with patch.object(self.window.windowHandle(), "startSystemMove", return_value=True) as move:
+            QTest.mouseClick(self.window.window_bar, Qt.MouseButton.LeftButton, pos=QPoint(700, 22))
+            move.assert_called_once()
+        with patch.object(active, "confirm_discard", return_value=False):
+            self.window.window_bar.close_button.click()
+            self.assertTrue(self.window.isVisible())
+            self.assertEqual(self.window.tabs.count(), 2)
+
+    def test_overflow_tabs_leave_window_controls_accessible(self):
+        self.window.resize(1050, 760)
+        for index in range(14):
+            self.window.new_tab()
+            self.window.tabs.setTabText(index, f"긴 문서 이름과 여러 항목 {index}.pdf")
+        APP.processEvents()
+        bar = self.window.window_bar
+        self.assertLessEqual(bar.close_button.geometry().right(), self.window.width())
+        self.assertLess(bar.add_button.geometry().right(), bar.minimize_button.geometry().left())
+        self.window.tabs.tabBar().moveTab(0, 14)
+        self.assertIs(self.window.current, self.window.tabs.widget(self.window.tabs.tabBar().currentIndex()))
 
     def test_tray_hide_preserves_and_reveal_restores(self):
         class Tray:
