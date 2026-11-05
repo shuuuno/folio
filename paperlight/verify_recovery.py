@@ -80,10 +80,16 @@ def verify(output, native=False):
             child = subprocess.Popen(command, stdout=log, stderr=log,
                                      creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
             deadline = time.monotonic() + 25
-            while not ready.exists() and child.poll() is None and time.monotonic() < deadline:
+            session = None
+            while child.poll() is None and time.monotonic() < deadline:
+                try:
+                    session = json.loads(ready.read_text(encoding="utf-8"))
+                    break
+                except (FileNotFoundError, PermissionError, json.JSONDecodeError):
+                    # Windows의 일시적인 파일 공유 잠금까지 해제된 뒤 읽는다.
+                    pass
                 time.sleep(.05)
-            assert ready.exists(), "자동 복구본 준비 실패: worker.log 확인"
-            session = json.loads(ready.read_text(encoding="utf-8"))
+            assert session is not None, "자동 복구본 준비 실패: worker.log 확인"
             directory = output / "test-appdata/recovery"
             assert session["session"] not in [r["id"] for r in RecoveryStore.available(directory)]
             child.kill()
