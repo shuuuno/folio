@@ -346,6 +346,8 @@ class MainWindow(QMainWindow):
                 QFontDatabase.addApplicationFont(str(Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / name))
             MainWindow._fonts_loaded = True
         self.model = PdfDocument()
+        self.open_files_handler = None
+        self._close_confirmed = False
         self.page_number = 0
         self.zoom = 1.0
         self.fit_mode = True
@@ -616,10 +618,16 @@ class MainWindow(QMainWindow):
                                ("Shift+F3", lambda: self.search(-1)), ("Escape", self.clear_selection)]:
             action = QAction(self)
             action.setShortcut(QKeySequence(keys))
+            action.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
             action.triggered.connect(callback)
             self.addAction(action)
 
     def open_dialog(self):
+        if self.open_files_handler:
+            paths, _ = QFileDialog.getOpenFileNames(self, "PDF 여러 개 열기", "", "PDF 문서 (*.pdf)")
+            if paths:
+                self.open_files_handler(paths)
+            return
         path, _ = QFileDialog.getOpenFileName(self, "PDF 열기", "", "PDF 문서 (*.pdf)")
         if path:
             self.open_file(path)
@@ -1320,7 +1328,7 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, "작업을 완료할 수 없습니다", str(exc))
 
     def closeEvent(self, event):
-        if self.confirm_discard():
+        if self._close_confirmed or self.confirm_discard():
             self.recovery_timer.stop()
             self.clear_recovery(release=True)
             self._thumbnail_generation += 1
@@ -1336,6 +1344,12 @@ class MainWindow(QMainWindow):
             event.acceptProposedAction()
 
     def dropEvent(self, event):
+        if self.open_files_handler:
+            paths = [u.toLocalFile() for u in event.mimeData().urls() if u.toLocalFile().lower().endswith(".pdf")]
+            if paths:
+                self.open_files_handler(paths)
+                event.acceptProposedAction()
+            return
         for url in event.mimeData().urls():
             if url.toLocalFile().lower().endswith(".pdf"):
                 if self.open_file(url.toLocalFile()):

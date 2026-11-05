@@ -8,6 +8,9 @@ Windows 개인용 오프라인 PDF 뷰어·편집기. 한국어 UI. 문서 외�
 - 배포: `.venv\Scripts\python.exe scripts/build.py`
 - 팀 배포: 깨끗한 Git 커밋에서 `scripts/release.py`, 설치/제거 QA는 `scripts/verify_installer.py`. 빌드 출력은 `build/distribution`, 배포물은 `release/<버전>`. 실행 중인 `dist/Paperlight`를 덮어쓰지 않는다.
 - `assets/`는 배포 예제/아이콘이다. `evidence/`, 타사 바이너리·조사 원본은 Git에 넣지 않는다. NSIS는 현재 사용자 설치이며 제거 시 생성 목록의 파일만 지우고 서명/복구본은 유지한다.
+- `workspace.py`는 탭별 MainWindow를 보관한다. 전역 종료는 모든 탭 확인 후 복구본을 정리한다. `instance.py`는 사용자별 QLockFile/로컬 파이프로 탐색기 열기를 전달하며 외부 통신을 하지 않는다.
+- `conversion.py`는 별도 프로세스에서 변환하고 전체 성공 후 새 결과만 게시한다. Office 자동화는 직접 연 문서만 닫고 기존 사용자 Office 인스턴스를 종료하지 않는다. 변환 취소는 파일 처리 경계에서 적용한다.
+- PDF 연결은 HKCU의 ProgID/Capabilities 후보 등록만 한다. UserChoice/Hash를 직접 바꾸지 않는다. 트레이 숨김은 문서와 복구 타이머를 유지하며 명시적 종료는 미저장 확인을 거친다.
 - 기존 본문 수정은 원본 텍스트 제거 후 실제 PDF 텍스트를 재삽입한다. 흰 사각형으로 가리는 구현 금지.
 - 모든 편집은 실패 시 되돌린다. 원본은 기본적으로 다른 이름으로 저장하고, PDF 재개방 검증 후 원자적으로 교체한다.
 - OCR, 문서 전체 reflow, 인증서 전자서명은 범위 밖. 지원하지 못하는 글꼴·회전 텍스트는 명시한다.

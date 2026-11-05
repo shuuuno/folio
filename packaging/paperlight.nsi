@@ -52,7 +52,7 @@ Function ${PREFIX}CheckAppClosed
   FileClose $0
   Goto closed
 busy:
-  MessageBox MB_OK|MB_ICONEXCLAMATION "이 폴더의 Paperlight가 실행 중이거나 파일에 접근할 수 없습니다. 앱을 종료한 뒤 다시 시도하세요." /SD IDOK
+  MessageBox MB_OK|MB_ICONEXCLAMATION "이 폴더의 Paperlight가 실행 중이거나 파일에 접근할 수 없습니다. 트레이 메뉴에서 ‘완전히 종료’한 뒤 다시 시도하세요." /SD IDOK
   SetErrorLevel 2
   Abort
 closed:
@@ -77,6 +77,17 @@ Section "Paperlight" SEC_MAIN
   WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '$\"$INSTDIR\Uninstall.exe$\" /S'
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
+  SetRegView 64
+  WriteRegStr HKCU "Software\Classes\Paperlight.PDF" "" "Paperlight PDF 문서"
+  WriteRegStr HKCU "Software\Classes\Paperlight.PDF\DefaultIcon" "" '$\"$INSTDIR\Paperlight.exe$\",0'
+  WriteRegStr HKCU "Software\Classes\Paperlight.PDF\shell\open\command" "" '$\"$INSTDIR\Paperlight.exe$\" $\"%1$\"'
+  WriteRegStr HKCU "Software\Classes\.pdf\OpenWithProgids" "Paperlight.PDF" ""
+  WriteRegStr HKCU "Software\Paperlight\Capabilities" "ApplicationName" "Paperlight"
+  WriteRegStr HKCU "Software\Paperlight\Capabilities" "ApplicationDescription" "오프라인 PDF 뷰어·편집기"
+  WriteRegStr HKCU "Software\Paperlight\Capabilities\FileAssociations" ".pdf" "Paperlight.PDF"
+  WriteRegStr HKCU "Software\RegisteredApplications" "Paperlight" "Software\Paperlight\Capabilities"
+  System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+  SetRegView 32
 SectionEnd
 
 Function un.onInit
@@ -93,6 +104,16 @@ Section "Uninstall"
     RMDir "$SMPROGRAMS\Paperlight"
     DeleteRegKey HKCU "${UNINSTALL_KEY}"
   ${EndIf}
+  SetRegView 64
+  ReadRegStr $0 HKCU "Software\Classes\Paperlight.PDF\shell\open\command" ""
+  ${If} $0 == '$\"$INSTDIR\Paperlight.exe$\" $\"%1$\"'
+    DeleteRegKey HKCU "Software\Classes\Paperlight.PDF"
+    DeleteRegValue HKCU "Software\Classes\.pdf\OpenWithProgids" "Paperlight.PDF"
+    DeleteRegKey HKCU "Software\Paperlight\Capabilities"
+    DeleteRegValue HKCU "Software\RegisteredApplications" "Paperlight"
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+  ${EndIf}
+  SetRegView 32
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
   ; LOCALAPPDATA\Paperlight의 서명과 복구본, 사용자가 넣은 파일은 유지한다.

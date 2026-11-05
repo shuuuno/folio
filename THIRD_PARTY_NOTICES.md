@@ -15,3 +15,5 @@ Paperlight는 개인 및 같은 조직 내부 팀 사용을 위해 만든 오프
 [GNU FAQ](https://www.gnu.org/licenses/gpl-faq.en.html#InternalDistribution)는 같은 조직 내부의 복사·사용과 다른 조직/개인에게 전달하는 배포를 구분합니다. 이 릴리스는 내부 사용 범위로 준비했습니다. 고객·외부 협력사 배포, 공개 다운로드, 서버 서비스로 확장할 때는 실제 배포 방식에 맞춰 AGPL 준수 범위 또는 Artifex 상용 계약을 먼저 결정해야 합니다. 비공개 Git 저장소나 무료 앱이라는 이유만으로 라이선스 의무가 없어지는 것은 아닙니다.
 
 상용 PDF 편집기의 실행 파일·코드·아이콘·UI 리소스는 Paperlight 배포물에 포함하지 않습니다.
+
+0.8.0의 변환 기능은 python-docx, python-pptx, Pillow, lxml, pywin32와 그 의존성을 사용합니다. 고정 버전은 requirements-lock.txt, 포함 라이선스는 배포 폴더 licenses에 있습니다. Microsoft Office와 LibreOffice 자체는 배포하지 않으며, 사용자가 설치·사용 권한을 가진 프로그램을 로컬 변환에 이용합니다.

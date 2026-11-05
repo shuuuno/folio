@@ -33,7 +33,7 @@ command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--one
            "--name", "Paperlight", "--distpath", str(target.parent),
            "--icon", "assets/paperlight.ico", "--version-file", str(version_file),
            "--add-data", "assets/paperlight.ico;assets", "--exclude-module", "PySide6.QtTest",
-           "--exclude-module", "PySide6.QtNetwork", "--exclude-module", "tkinter", "launcher.py"]
+           "--exclude-module", "tkinter", "launcher.py"]
 subprocess.run(command, check=True)
 shutil.copy2(ROOT / "README.md", target / "사용안내.md")
 shutil.copy2(ROOT / "assets" / "시작하기.pdf", target / "시작하기.pdf")
@@ -41,7 +41,7 @@ shutil.copytree(ROOT / "docs", target / "docs", dirs_exist_ok=True)
 shutil.copy2(ROOT / "THIRD_PARTY_NOTICES.md", target / "THIRD_PARTY_NOTICES.md")
 licenses = target / "licenses"
 licenses.mkdir(exist_ok=True)
-for package in ("PyMuPDF", "PySide6-Essentials", "shiboken6", "PyInstaller"):
+for package in ("PyMuPDF", "PySide6-Essentials", "shiboken6", "PyInstaller", "python-docx", "python-pptx", "Pillow", "lxml", "pywin32", "typing_extensions", "XlsxWriter"):
     dist = importlib.metadata.distribution(package)
     for item in dist.files or []:
         if any(word in str(item).lower() for word in ("license", "copying", "notice")) and Path(dist.locate_file(item)).is_file():

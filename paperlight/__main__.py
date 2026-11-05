@@ -8,6 +8,12 @@ from .window import MainWindow
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--convert-worker":
+        from .conversion import worker
+        sys.exit(worker(Path(sys.argv[2]), Path(sys.argv[3])))
+    if len(sys.argv) == 3 and sys.argv[1] in ("--verify-workspace", "--verify-workspace-native"):
+        from .verify_workspace import verify
+        sys.exit(verify(Path(sys.argv[2]), native=sys.argv[1] == "--verify-workspace-native"))
     if len(sys.argv) == 3 and sys.argv[1] == "--verify-recovery-worker":
         from .verify_recovery import worker
         sys.exit(worker(Path(sys.argv[2])))
@@ -23,11 +29,27 @@ def main():
     app.setOrganizationName("Paperlight")
     app.setApplicationVersion(__version__)
     app.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets" / "paperlight.ico")))
-    window = MainWindow()
+    from .instance import InstanceServer
+    from .workspace import Workspace
+    from PySide6.QtWidgets import QMessageBox
+    paths = [p for p in sys.argv[1:] if not p.startswith("--")]
+    instance = InstanceServer()
+    try:
+        if not instance.start_or_forward(paths):
+            return
+    except Exception as exc:
+        QMessageBox.warning(None, "Paperlight 실행", str(exc))
+        return
+    window = Workspace()
+    instance.requested.connect(window.open_files)
+    app.aboutToQuit.connect(instance.close)
     window.show()
     def start():
-        if not window.offer_recovery(startup=True) and len(sys.argv) > 1 and Path(sys.argv[1]).is_file():
-            window.open_file(sys.argv[1])
+        window.current.offer_recovery(startup=True)
+        if paths:
+            window.open_files(paths)
+        elif "--tray" in sys.argv and window.tray:
+            window.hide_to_tray()
     QTimer.singleShot(0, start)
     sys.exit(app.exec())
 

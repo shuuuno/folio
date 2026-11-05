@@ -13,6 +13,7 @@ import winreg
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from paperlight import __version__
+from paperlight.windows_integration import registration_values
 
 KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Paperlight"
 VIEW = winreg.KEY_WOW64_32KEY
@@ -30,6 +31,14 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def registry_value(path, name):
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key:
+            return winreg.QueryValueEx(key, name)[0]
+    except FileNotFoundError:
+        return None
+
+
 def run(command, timeout=90):
     return subprocess.run(command, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW).returncode
 
@@ -39,6 +48,10 @@ def main():
     shortcut_dir = Path(os.environ["APPDATA"]) / "Microsoft/Windows/Start Menu/Programs/Paperlight"
     if registration() or registration(winreg.KEY_WOW64_64KEY) or shortcut_dir.exists():
         raise SystemExit("기존 Paperlight 설치/시작 메뉴가 있어 중단합니다. 깨끗한 Windows 계정에서 검증하세요.")
+    if registry_value(r"Software\RegisteredApplications", "Paperlight") is not None:
+        raise SystemExit("Paperlight 기본 앱 후보 등록이 이미 있습니다. 이를 보존하기 위해 검증을 중단합니다.")
+    choice_path = r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice"
+    user_choice = (registry_value(choice_path, "ProgId"), registry_value(choice_path, "Hash"))
     output = ROOT / "evidence" / ("installer-" + uuid.uuid4().hex[:8])
     output.mkdir(parents=True)
     target = (ROOT / "build" / "installer-qa" / output.name / "한글 경로 Paperlight").resolve()
@@ -61,9 +74,14 @@ def main():
         expected = {str(p.relative_to(payload)): digest(p) for p in payload.rglob("*") if p.is_file()}
         assert all((target / rel).is_file() and digest(target / rel) == h for rel, h in expected.items())
         result.update(installed_files_match=True, registered_version=True, start_menu=True)
+        for path, name, value in registration_values(executable):
+            assert registry_value(path, name) == value, path
+        assert user_choice == (registry_value(choice_path, "ProgId"), registry_value(choice_path, "Hash"))
+        result["default_app_candidate_registered_without_changing_default"] = True
         # 실제 사용자 문서·복구 공간과 분리된 합성 문서 시험.
         for flag, folder, report in (("--verify-build", "app", "package-check.json"),
-                                     ("--verify-recovery", "recovery", "recovery-check.json")):
+                                     ("--verify-recovery", "recovery", "recovery-check.json"),
+                                     ("--verify-workspace", "workspace", "workspace-check.json")):
             assert run([str(executable), flag, str(output / folder)], timeout=120) == 0, flag
             data = json.loads((output / folder / report).read_text(encoding="utf-8"))
             assert data["passed"] and data["frozen"], report
@@ -98,6 +116,10 @@ def main():
         assert run(f'"{uninstaller_copy}" /S _?={target}') == 0, "제거 실패"
         installed = False
         assert not registration() and not shortcut_dir.exists()
+        for path, name, value in registration_values(executable):
+            assert registry_value(path, name) is None, path
+        assert user_choice == (registry_value(choice_path, "ProgId"), registry_value(choice_path, "Hash"))
+        result["default_app_registration_removed_and_user_choice_preserved"] = True
         assert not (target / "Uninstall.exe").exists()
         assert not any((target / rel).exists() for rel in expected), "프로그램 파일이 남았습니다"
         assert all(p.read_text(encoding="utf-8") == "keep user data" for p in (root_sentinel, nested_sentinel))
