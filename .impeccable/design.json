@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-05T01:30:38.412356+00:00",
+  "title": "Design System: Paperlight",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "본문 잉크"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "보조 회청색"
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "실행 파랑"
+      },
+      "selected": {
+        "role": "primary",
+        "displayName": "선택 옅은 파랑"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "영역 경계"
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "문서 캔버스"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "흰 패널"
+      },
+      "chrome": {
+        "role": "neutral",
+        "displayName": "주변 밝은 바탕"
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "삭제 붉은색"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "시작 제목",
+        "purpose": "시작 화면의 큰 제목"
+      },
+      "title": {
+        "displayName": "제목",
+        "purpose": "제품명과 속성 패널 제목"
+      },
+      "body": {
+        "displayName": "기본",
+        "purpose": "한국어 조작부"
+      },
+      "compact": {
+        "displayName": "작은 조작부",
+        "purpose": "도구막대와 상태 표시줄"
+      }
+    },
+    "shadows": [
+      {
+        "name": "document-page",
+        "value": "QGraphicsDropShadowEffect(blurRadius=18, offset=(0, 4), color=QColor(32, 42, 59, 28))",
+        "purpose": "실제 PDF 페이지만 캔버스에서 분리한다. CSS 그림자와 수치 호환을 가정하지 않는다."
+      }
+    ],
+    "motion": [],
+    "breakpoints": [],
+    "native": {
+      "platform": "Windows / PySide6 Widgets",
+      "units": "Qt 논리 픽셀; PDF 장면 여백은 문서 좌표",
+      "sources": [
+        "paperlight/theme.py",
+        "paperlight/style.py",
+        "paperlight/icons.py",
+        "paperlight/workspace.py",
+        "paperlight/window.py"
+      ],
+      "previewScope": "HTML/CSS는 문서 표본이며 네이티브 위젯·동작 검증이 아니다. SVG는 실제 기하학 경로를 옮겼다. 미구현 색조 단계와 웹 중단점은 생성하지 않는다."
+    }
+  },
+  "components": [
+    {
+      "name": "주요 실행",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Qt 버튼 상태를 설명하는 문서 표본. 실제 제품은 QSS를 사용한다.",
+      "html": "<button class=\"ds-button-primary\">문서에 적용</button>",
+      "css": ".ds-button-primary{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;border:1px solid transparent;border-radius:7px;padding:7px 11px;color:#202A3B;background:transparent;background:#4361DE;color:#FFFFFF;font-weight:600;padding:9px 18px;}.ds-button-primary:hover{background:#F0F3F9}.ds-button-primary:active{background:#E5EAF4}.ds-button-primary:focus-visible{outline:none;border-color:#8D9FEE}.ds-button-primary:disabled{color:#9CA6B6}.ds-button-primary:hover{background:#3451C8}.ds-button-primary:active{background:#2B44AE}.ds-button-primary:disabled{background:#DDE3F6;color:#7C89AE}"
+    },
+    {
+      "name": "일반 실행",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Qt 버튼 상태를 설명하는 문서 표본. 실제 제품은 QSS를 사용한다.",
+      "html": "<button class=\"ds-button-ghost\">열기</button>",
+      "css": ".ds-button-ghost{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;border:1px solid transparent;border-radius:7px;padding:7px 11px;color:#202A3B;background:transparent;}.ds-button-ghost:hover{background:#F0F3F9}.ds-button-ghost:active{background:#E5EAF4}.ds-button-ghost:focus-visible{outline:none;border-color:#8D9FEE}.ds-button-ghost:disabled{color:#9CA6B6}"
+    },
+    {
+      "name": "보조 실행",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Qt 버튼 상태를 설명하는 문서 표본. 실제 제품은 QSS를 사용한다.",
+      "html": "<button class=\"ds-button-secondary\">글자 색상</button>",
+      "css": ".ds-button-secondary{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;border:1px solid transparent;border-radius:7px;padding:7px 11px;color:#202A3B;background:transparent;background:#FFFFFF;border-color:#E1E5ED;}.ds-button-secondary:hover{background:#F0F3F9}.ds-button-secondary:active{background:#E5EAF4}.ds-button-secondary:focus-visible{outline:none;border-color:#8D9FEE}.ds-button-secondary:disabled{color:#9CA6B6}.ds-button-secondary:hover{background:#F3F5FA}"
+    },
+    {
+      "name": "삭제 실행",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Qt 버튼 상태를 설명하는 문서 표본. 실제 제품은 QSS를 사용한다.",
+      "html": "<button class=\"ds-button-danger\">선택 항목 삭제</button>",
+      "css": ".ds-button-danger{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;border:1px solid transparent;border-radius:7px;padding:7px 11px;color:#202A3B;background:transparent;color:#A6434A;}.ds-button-danger:hover{background:#F0F3F9}.ds-button-danger:active{background:#E5EAF4}.ds-button-danger:focus-visible{outline:none;border-color:#8D9FEE}.ds-button-danger:disabled{color:#9CA6B6}.ds-button-danger:hover{background:#FFF0F1}"
+    },
+    {
+      "name": "텍스트 입력",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "네이티브 입력의 기본·hover·focus 및 텍스트 선택 상태 표본.",
+      "html": "<input class=\"ds-input\" aria-label=\"텍스트 입력\" placeholder=\"내용을 입력하세요\">",
+      "css": ".ds-input{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;color:#202A3B;background:#FFFFFF;border:1px solid #E1E5ED;border-radius:7px;padding:8px;}.ds-input::placeholder{color:#667187}.ds-input:hover{border-color:#B8C2D4}.ds-input:focus-visible{outline:none;border-color:#8095E8;background:#FFFFFF}.ds-input::selection{background:#DCE5FF;color:#24314C}"
+    },
+    {
+      "name": "검색 입력",
+      "kind": "input",
+      "refersTo": "search",
+      "description": "네이티브 입력의 기본·hover·focus 및 텍스트 선택 상태 표본.",
+      "html": "<input class=\"ds-search\" aria-label=\"검색 입력\" placeholder=\"문서에서 찾기\">",
+      "css": ".ds-search{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;color:#202A3B;background:#FFFFFF;border:1px solid #E1E5ED;border-radius:7px;padding:8px;background:#F7F8FB;border-color:transparent;padding:7px 8px;width:180px;}.ds-search::placeholder{color:#667187}.ds-search:hover{border-color:#B8C2D4}.ds-search:focus-visible{outline:none;border-color:#8095E8;background:#FFFFFF}.ds-search::selection{background:#DCE5FF;color:#24314C}"
+    },
+    {
+      "name": "선택된 읽기 도구",
+      "kind": "nav",
+      "refersTo": "tool-selected",
+      "description": "24px 격자의 실제 cursor 경로를 SVG로 옮긴 문서 표본. Qt에서 버튼 전체 크기는 62×62px이다.",
+      "html": "<button class=\"ds-tool-selected\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 3L18 13L12 14L9 20L5 3Z\"/></svg><span>읽기</span></button>",
+      "css": ".ds-tool-selected{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;font-size:11px;font-weight:600;background:#EBEFFE;color:#4361DE;border:1px solid transparent;border-radius:7px;padding:8px 4px;width:62px;height:62px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center}.ds-tool-selected:focus-visible{outline:none;border-color:#8D9FEE}.ds-tool-selected:disabled{color:#9CA6B6}"
+    },
+    {
+      "name": "문서 탭",
+      "kind": "nav",
+      "refersTo": "document-tab",
+      "description": "선택·비선택 탭의 색과 여백 표본. 실제 Qt 탭은 드래그·닫기·가운데 생략을 지원한다.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"문서\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">검토 문서.pdf *</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">새 문서</button></div>",
+      "css": ".ds-tabs{display:flex}.ds-tab{font-family:'Pretendard Variable','Malgun Gothic',sans-serif;font-size:13px;background:#F1F3F8;color:#606D83;border:0;border-right:1px solid #E1E5ED;padding:10px 15px;min-width:130px;max-width:230px}.ds-tab[aria-selected=\"true\"]{background:#FFFFFF;color:#24314C}.ds-tab:hover:not([aria-selected=\"true\"]){background:#E9EDF5}.ds-tab:focus-visible{outline:1px solid #8D9FEE;outline-offset:-1px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "문서에 시선을 모으는 밝은 작업 공간",
+    "overview": "사용자가 선택한 밝고 미니멀한 화면, 얇은 선 아이콘, 넓은 문서 영역을 유지한다. 흰 도구 영역과 회청색 캔버스를 구분하고 파란색으로 선택과 주요 실행을 표시한다. 한국어를 읽기 편하게 배치하며 장식보다 문서와 편집 상태가 먼저 보이게 한다.",
+    "keyCharacteristics": [
+      "흰 패널과 밝은 회청색 문서 바탕.",
+      "한 계열 글꼴과 얇은 기하학 선 아이콘.",
+      "선택·저장·적용을 구분하는 파란 상태색.",
+      "즉시 반응하는 Windows 네이티브 위젯."
+    ],
+    "rules": [],
+    "dos": [
+      "**Do** 문서가 중앙의 가변 공간을 사용하게 하고 주변 패널을 접을 수 있게 유지한다.",
+      "**Do** 선택·비활성·키보드 포커스와 저장하지 않은 변경을 서로 구분한다.",
+      "**Do** 번들 Pretendard의 라이선스와 소스 기반 기하학 아이콘을 유지한다.",
+      "**Do** 배율별 Windows 창에서 한국어 줄바꿈과 조작부 잘림을 확인한다."
+    ],
+    "donts": [
+      "**Don't** UI 글꼴 설정으로 PDF 원본의 글꼴이나 문서 색상을 바꾸지 않는다.",
+      "**Don't** 생성된 래스터 그림이나 장식 애니메이션을 작업 공간에 추가하지 않는다.",
+      "**Don't** 미니멀하게 보이도록 기존 기능·라벨·단축키·상태 표시를 제거하지 않는다."
+    ]
+  }
+}

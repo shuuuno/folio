@@ -1,17 +1,21 @@
 """문서별 편집 상태를 보존하는 탭 창과 트레이."""
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QSettings, QUrl
+from PySide6.QtCore import Qt, QSettings, QUrl, QSize
 from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
 from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QToolButton,
-                              QSystemTrayIcon, QMenu, QMessageBox)
+                              QSystemTrayIcon, QMenu, QMessageBox, QWidget, QVBoxLayout,
+                              QHBoxLayout, QLabel, QPushButton, QTabBar)
 from .window import MainWindow
 from .style import STYLE
+from .icons import icon
+from .theme import install_theme
 
 
 class Workspace(QMainWindow):
     def __init__(self, *, data_dir=None, settings=None, tray_enabled=True):
         super().__init__()
+        install_theme()
         self.data_dir = data_dir
         self.settings = settings if settings is not None else QSettings()
         self.exiting = False
@@ -22,32 +26,89 @@ class Workspace(QMainWindow):
         self.tabs.setMovable(True)
         self.tabs.tabCloseRequested.connect(self.close_tab)
         self.tabs.currentChanged.connect(self.active_changed)
-        self.setCentralWidget(self.tabs)
+        root = QWidget()
+        layout = QVBoxLayout(root)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.setCentralWidget(root)
+        header = QWidget()
+        header.setObjectName("appHeader")
+        row = QHBoxLayout(header)
+        row.setContentsMargins(20, 10, 18, 10)
+        row.setSpacing(10)
+        mark = QLabel()
+        mark.setPixmap(icon("file", "#4361DE").pixmap(QSize(24, 24)))
+        row.addWidget(mark)
+        brand = QLabel("Paperlight")
+        brand.setObjectName("brand")
+        row.addWidget(brand)
+        row.addSpacing(18)
+        file_button = QToolButton()
+        file_button.setText("파일")
+        file_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        row.addWidget(file_button)
+        row.addStretch()
+        self.document_state = QLabel()
+        self.document_state.setObjectName("muted")
+        row.addWidget(self.document_state)
+        row.addSpacing(10)
+        for label, symbol, callback in (("열기", "folder", lambda: self.current.open_dialog()),
+                                         ("변환", "convert", self.show_conversion)):
+            button = QPushButton(label)
+            button.setIcon(icon(symbol))
+            button.setIconSize(QSize(18, 18))
+            button.clicked.connect(callback)
+            row.addWidget(button)
+        self.save_button = QPushButton("저장")
+        self.save_button.setObjectName("primary")
+        self.save_button.setIcon(icon("save", "#FFFFFF"))
+        self.save_button.setToolTip("다른 이름으로 저장 · Ctrl+S")
+        self.save_button.clicked.connect(lambda: self.current.save_as())
+        row.addWidget(self.save_button)
+        options = QToolButton()
+        options.setObjectName("iconButton")
+        options.setIcon(icon("more"))
+        options.setToolTip("앱 설정 및 종료")
+        options.setAccessibleName("앱 설정 및 종료")
+        options.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        row.addWidget(options)
+        layout.addWidget(header)
+        layout.addWidget(self.tabs, 1)
         self.setWindowTitle("Paperlight")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets/paperlight.ico")))
         self.resize(1400, 960)
         self.setMinimumSize(1050, 760)
-        self.setStyleSheet(STYLE + "QTabBar::tab { padding: 10px 18px; background: #edf2f4; }"
-                          "QTabBar::tab:selected { background: white; color: #146b66; }"
-                          "QTabWidget::pane { border: 0; }")
+        self.setStyleSheet(STYLE)
+        self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideMiddle)
+        self.tabs.tabBar().setExpanding(False)
         add = QToolButton()
-        add.setText("+ 파일 열기")
+        add.setObjectName("iconButton")
+        add.setIcon(icon("plus"))
+        add.setToolTip("PDF 파일 열기 · Ctrl+O")
+        add.setAccessibleName("PDF 파일 열기")
+        add.setFixedSize(40, 38)
         add.clicked.connect(lambda: self.current.open_dialog())
         self.tabs.setCornerWidget(add)
-        files = self.menuBar().addMenu("파일")
+        files = QMenu(self)
+        file_button.setMenu(files)
         files.addAction("PDF 여러 개 열기", lambda: self.current.open_dialog())
+        files.addAction("다른 이름으로 저장…", lambda: self.current.save_as())
+        files.addAction("작업 복구…", lambda: self.current.offer_recovery())
+        files.addSeparator()
         close = files.addAction("현재 탭 닫기", lambda: self.close_tab(self.tabs.currentIndex()))
         close.setShortcut(QKeySequence("Ctrl+W"))
+        self.addAction(close)
         files.addAction("완전히 종료", self.quit_app)
-        convert = self.menuBar().addMenu("변환")
-        convert.addAction("파일 변환…", self.show_conversion)
-        app_menu = self.menuBar().addMenu("앱")
+        app_menu = QMenu(self)
+        options.setMenu(app_menu)
         app_menu.addAction("PDF 기본 앱 설정…", self.open_default_settings)
         self.tray_preference = app_menu.addAction("창을 닫으면 트레이에 유지")
         self.tray_preference.setCheckable(True)
         self.tray_preference.setChecked(self.settings.value("closeToTray", True, type=bool))
         self.tray_preference.toggled.connect(lambda v: self.settings.setValue("closeToTray", v))
         app_menu.addAction("트레이로 숨기기", self.hide_to_tray)
+        app_menu.addSeparator()
+        app_menu.addAction("완전히 종료", self.quit_app)
         self.tray = None
         if tray_enabled and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
@@ -76,11 +137,22 @@ class Workspace(QMainWindow):
     def new_tab(self):
         editor = MainWindow()
         editor.setWindowFlags(Qt.WindowType.Widget)
+        editor.setMinimumSize(0, 0)
+        editor.header.hide()
         if self.data_dir is not None:
             editor.data_dir = Path(self.data_dir)
         editor.open_files_handler = self.open_files
         editor.windowTitleChanged.connect(lambda title, w=editor: self.update_tab(w))
-        self.tabs.addTab(editor, "새 문서")
+        index = self.tabs.addTab(editor, "새 문서")
+        close = QToolButton()
+        close.setObjectName("tabClose")
+        close.setIcon(icon("close"))
+        close.setIconSize(QSize(14, 14))
+        close.setFixedSize(24, 24)
+        close.setToolTip("탭 닫기 · Ctrl+W")
+        close.setAccessibleName("탭 닫기")
+        close.clicked.connect(lambda: self.close_tab(self.tabs.indexOf(editor)))
+        self.tabs.tabBar().setTabButton(index, QTabBar.ButtonPosition.RightSide, close)
         self.tabs.setCurrentWidget(editor)
         return editor
 
@@ -95,6 +167,8 @@ class Workspace(QMainWindow):
         self.tabs.setTabToolTip(index, str(editor.model.path or "PDF를 열어 시작하세요"))
         if editor is self.current:
             self.setWindowTitle(editor.windowTitle())
+            self.save_button.setEnabled(editor.save_button.isEnabled())
+            self.document_state.setText("저장하지 않은 변경" if editor.model.dirty or editor.has_draft else "")
 
     def active_changed(self, index):
         if self.current:

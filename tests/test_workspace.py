@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QSettings, QTimer
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QTabBar
 from paperlight.workspace import Workspace
 from paperlight.instance import InstanceServer
 from paperlight.windows_integration import registration_values
@@ -72,6 +72,41 @@ class WorkspaceTests(unittest.TestCase):
         with patch.object(self.window.current, "confirm_discard", return_value=False):
             self.assertFalse(self.window.close_tab(1))
         self.assertEqual(self.window.tabs.count(), 2)
+
+    def test_header_save_follows_active_document_and_tab_close_after_reorder(self):
+        self.assertFalse(self.window.save_button.isEnabled())
+        self.window.open_files([self.a, self.b])
+        first = self.window.tabs.widget(0)
+        self.assertTrue(self.window.save_button.isEnabled())
+        with patch.object(self.window.current, "save_as") as save:
+            self.window.save_button.click()
+            save.assert_called_once()
+        self.assertTrue(first.header.isHidden())
+        self.window.tabs.tabBar().moveTab(0, 1)
+        close = self.window.tabs.tabBar().tabButton(1, QTabBar.ButtonPosition.RightSide)
+        close.click()
+        self.assertEqual(self.window.tabs.count(), 1)
+        self.assertEqual(self.window.current.model.path, self.b)
+        self.window.new_tab()
+        self.assertFalse(self.window.save_button.isEnabled())
+
+    def test_compact_edit_fit_and_sidebar_toggle(self):
+        self.window.open_files([self.a])
+        editor = self.window.current
+        self.window.resize(1050, 760)
+        editor.mode_buttons["edit"].click()
+        APP.processEvents()
+        editor.fit_width()
+        self.assertTrue(editor.inspector.isVisible())
+        self.assertTrue(editor.apply_button.isVisible())
+        self.assertEqual(editor.view.horizontalScrollBar().maximum(), 0)
+        self.assertEqual(self.window.height(), 760)
+        status = editor.statusBar()
+        self.assertLess(status.mapTo(self.window, status.rect().bottomRight()).y(), 760)
+        editor.sidebar_button.click()
+        self.assertTrue(editor.sidebar.isHidden())
+        editor.sidebar_button.click()
+        self.assertFalse(editor.sidebar.isHidden())
 
     def test_tray_hide_preserves_and_reveal_restores(self):
         class Tray:

@@ -7,6 +7,9 @@ research/artifacts/
 research/corpus/
 *.spec
 evidence/
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/*.local.json
 release/
 .env
 .env.*

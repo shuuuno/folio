@@ -32,7 +32,9 @@ version_file.write_text(f'''VSVersionInfo(
 command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed",
            "--name", "Paperlight", "--distpath", str(target.parent),
            "--icon", "assets/paperlight.ico", "--version-file", str(version_file),
-           "--add-data", "assets/paperlight.ico;assets", "--exclude-module", "PySide6.QtTest",
+           "--add-data", "assets/paperlight.ico;assets", "--add-data", "assets/fonts;assets/fonts",
+           "--add-data", "assets/ui;assets/ui",
+           "--exclude-module", "PySide6.QtTest",
            "--exclude-module", "tkinter", "launcher.py"]
 subprocess.run(command, check=True)
 shutil.copy2(ROOT / "README.md", target / "사용안내.md")

@@ -20,6 +20,11 @@ def verify(output, native=False):
     app = QApplication([])
     app.setStyle("Fusion")
     app.setApplicationName("PaperlightWorkspaceCheck")
+    def settle():
+        until = time.monotonic() + .3
+        while time.monotonic() < until:
+            app.processEvents()
+            time.sleep(.01)
     root = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1] / "assets"
     first, second = output / "첫 번째.pdf", output / "두 번째.pdf"
     shutil.copy2(root / "시작하기.pdf", first)
@@ -77,9 +82,39 @@ def verify(output, native=False):
                 child.kill()
                 child.wait(timeout=10)
             instance.close()
+        settle()
+        dialog.grab().save(str(output / "conversion.png"))
         dialog.hide()
-        app.processEvents()
+        settle()
         window.grab().save(str(output / "tabs.png"))
+        first_tab.set_mode("edit")
+        settle()
+        assert first_tab.view.horizontalScrollBar().maximum() == 0, "편집 모드 너비 맞춤 넘침"
+        window.grab().save(str(output / "edit.png"))
+        window.resize(1050, 760)
+        settle()
+        assert first_tab.view.horizontalScrollBar().maximum() == 0, "너비 맞춤 가로 넘침"
+        assert first_tab.inspector.geometry().right() < first_tab.width(), "편집 패널 잘림"
+        assert first_tab.apply_button.isVisible(), "적용 버튼 누락"
+        assert window.size().height() == 760, "최소 창 높이 초과"
+        assert first_tab.statusBar().mapTo(window, first_tab.statusBar().rect().bottomRight()).y() < 760, "하단 탐색줄 잘림"
+        window.grab().save(str(output / "compact-edit.png"))
+        first_tab.select_text(next(s for s in first_tab.model.page_spans(0) if s.text == "담당자: 김하늘"))
+        settle()
+        window.grab().save(str(output / "compact-selected.png"))
+        from unittest.mock import patch
+        with patch.object(first_tab, "choose_signature"):
+            first_tab.set_mode("sign")
+        settle()
+        window.grab().save(str(output / "compact-sign.png"))
+        first_tab.set_mode("view")
+        window.resize(1400, 960)
+        window.new_tab()
+        app.processEvents()
+        window.grab().save(str(output / "empty.png"))
+        window.tabs.setCurrentWidget(first_tab)
+        app.processEvents()
+        result["compact_edit_layout_and_fit"] = True
         result["tabs_independent_and_deduplicated"] = True
         if native:
             import ctypes
