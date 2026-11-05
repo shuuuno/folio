@@ -54,6 +54,8 @@ def main():
     subprocess.run([sys.executable, "scripts/build.py", "--dist-dir", str(payload.parent)], cwd=ROOT, check=True)
     if not (payload / "Paperlight.exe").is_file():
         raise SystemExit("포터블 빌드가 없습니다.")
+    if subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip() or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip() != commit:
+        raise SystemExit("빌드 중 소스가 변경되었습니다. 새 커밋에서 다시 빌드하세요.")
     shutil.copy2(compiler.parent / "COPYING", payload / "licenses" / "NSIS-COPYING.txt")
     (payload / "build-info.json").write_text(json.dumps(dict(version=__version__, commit=commit,
         python=sys.version, nsis="3.12", nsis_sha256=NSIS_SHA256), indent=2), encoding="utf-8")
@@ -74,7 +76,7 @@ def main():
     portable = Path(shutil.make_archive(str(release / f"Paperlight-{__version__}-Portable"), "zip", payload.parent, payload.name))
     source = release / f"Paperlight-{__version__}-Source.zip"
     subprocess.run(["git", "archive", "--format=zip", f"--prefix=Paperlight-{__version__}/",
-                    "-o", str(source), "HEAD"], cwd=ROOT, check=True)
+                    "-o", str(source), commit], cwd=ROOT, check=True)
     (release / "SHA256SUMS.txt").write_text("".join(f"{sha256(p)}  {p.name}\n" for p in (setup, portable, source)), encoding="utf-8")
     print(f"배포 파일: {release}\n소스 커밋: {commit}")
 

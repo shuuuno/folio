@@ -87,6 +87,13 @@ class ConversionTests(unittest.TestCase):
         with self.assertRaises(ConversionError):
             convert(dict(sources=[str(locked)], destination=str(self.root), format="docx"))
 
+    def test_owner_encrypted_pdf_without_open_password_is_rejected(self):
+        locked = self.root / "암호없이열리는암호화.pdf"
+        with fitz.open(self.source) as doc:
+            doc.save(locked, encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw="owner", user_pw="", permissions=fitz.PDF_PERM_COPY)
+        with self.assertRaises(ConversionError):
+            convert(dict(sources=[str(locked)], destination=str(self.root), format="png"))
+
 
 if __name__ == "__main__":
     unittest.main()

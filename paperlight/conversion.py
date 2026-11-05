@@ -24,7 +24,7 @@ def check_cancel(cancel_file):
 
 def open_pdf(path):
     doc = fitz.open(path)
-    if doc.needs_pass or doc.is_encrypted or not (doc.permissions & fitz.PDF_PERM_COPY):
+    if doc.needs_pass or doc.is_encrypted or (doc.metadata or {}).get("encryption") or not (doc.permissions & fitz.PDF_PERM_COPY):
         doc.close()
         raise ConversionError("암호화 또는 복사 제한 PDF는 변환하지 않습니다.")
     if not doc.page_count:
