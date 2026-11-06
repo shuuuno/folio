@@ -34,6 +34,8 @@ def objects(page):
                     or not 0 < item["size"] <= 1000 or len(item["color"]) != 3
                     or not all(0 <= v <= 1 for v in item["color"])):
                 continue
+            if "font_name" in item and not isinstance(item["font_name"], str):
+                continue
             if item["kind"] == "signature" and not isinstance(item["image"], str):
                 continue
             item["xref"] = xref
@@ -82,6 +84,7 @@ def insert(page, spec, font=None):
     item["rect"] = list(item["rect"])
     before = set(page.get_contents())
     if item["kind"] == "text":
+        item["font_name"] = font.name
         name = "PLObj" + item["id"]
         page.insert_font(fontname=name, fontbuffer=font.buffer)
         available = page.insert_textbox(item["rect"], item["text"], fontsize=item["size"],

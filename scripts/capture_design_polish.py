@@ -15,7 +15,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("phase", choices=("before", "after"))
     parser.add_argument("--scale", default="1")
-    parser.add_argument("--variant", choices=("bolder2",))
+    parser.add_argument("--variant", choices=("bolder2", "font-picker"))
+    parser.add_argument("--evidence-only", action="store_true")
     args = parser.parse_args()
     os.environ["QT_QPA_PLATFORM"] = "windows"
     os.environ["QT_SCALE_FACTOR"] = args.scale
@@ -31,6 +32,8 @@ def main():
         output /= args.variant
         evidence_root /= args.variant
     evidence = evidence_root / f"{args.phase}-{args.scale}"
+    if args.evidence_only:
+        output = evidence
     output.mkdir(parents=True, exist_ok=True)
     evidence.mkdir(parents=True, exist_ok=True)
     source = evidence / "시작하기.pdf"

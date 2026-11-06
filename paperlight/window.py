@@ -8,13 +8,13 @@ import json
 from dataclasses import asdict
 
 import pymupdf as fitz
-from PySide6.QtCore import Qt, QRectF, QSize, Signal, QTimer, QStandardPaths
+from PySide6.QtCore import Qt, QRectF, QSize, Signal, QTimer, QStandardPaths, QSettings
 from PySide6.QtGui import (QPixmap, QImage, QColor, QPen, QBrush, QPainter, QKeySequence,
                           QAction, QIcon, QFontDatabase)
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem,
     QStackedWidget, QListWidget, QListWidgetItem, QAbstractItemView, QSplitter,
-    QDoubleSpinBox, QSpinBox, QTextEdit, QLineEdit, QFileDialog,
+    QDoubleSpinBox, QSpinBox, QTextEdit, QLineEdit, QFileDialog, QComboBox,
     QMessageBox, QInputDialog, QColorDialog, QButtonGroup, QDialog, QApplication, QMenu,
     QToolButton, QGraphicsDropShadowEffect, QGridLayout, QScrollArea, QSizePolicy, QFrame)
 
@@ -26,6 +26,7 @@ from .theme import install_theme, COLORS
 from . import DISPLAY_NAME
 from .selection import TextSelection
 from .recovery import RecoveryStore, RecoveryDialog
+from .fonts import installed_fonts, default_font_id, font_bytes
 
 PAGE_MARGIN = 36
 
@@ -682,6 +683,21 @@ class MainWindow(QMainWindow):
         self.editor.setMinimumHeight(108)
         self.editor.setMaximumHeight(144)
         layout.addWidget(self.editor)
+        self.font_caption = QLabel("글꼴")
+        self.font_caption.setObjectName("panelCaption")
+        layout.addWidget(self.font_caption)
+        self.font_combo = QComboBox()
+        self.font_combo.setAccessibleName("PDF에 내장할 글꼴")
+        self.font_combo.setToolTip("편집용 내장이 허용된 Windows 설치 글꼴입니다. 한글 지원은 입력 내용으로 확인합니다.")
+        self.font_combo.setMaxVisibleItems(12)
+        self.font_combo.setMinimumContentsLength(12)
+        self.font_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.font_combo.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.font_combo.addItem("원본 글꼴 유지", None)
+        self.font_caption.setBuddy(self.font_combo)
+        self._font_options_loaded = False
+        self.font_combo.currentIndexChanged.connect(self.font_changed)
+        layout.addWidget(self.font_combo)
         self.font_label = QLabel("글꼴: 맑은 고딕")
         self.font_label.setWordWrap(True)
         self.font_label.setObjectName("muted")
@@ -772,6 +788,50 @@ class MainWindow(QMainWindow):
         inspector_layout.addWidget(footer)
         return inspector
 
+    @property
+    def selected_font_id(self):
+        return self.font_combo.currentData() if self.font_combo.isEnabled() else None
+
+    def set_font_choice(self, key):
+        index = self.font_combo.findData(key)
+        if index < 0:
+            raise EditError("선택했던 글꼴을 사용할 수 없습니다. 글꼴을 다시 선택해 주세요.")
+        self.font_combo.blockSignals(True)
+        self.font_combo.setCurrentIndex(index)
+        self.font_combo.blockSignals(False)
+
+    def configure_font_picker(self, mode):
+        if not self._font_options_loaded:
+            self.font_combo.blockSignals(True)
+            for choice in installed_fonts():
+                self.font_combo.addItem(choice.label, choice.key)
+            self.font_combo.blockSignals(False)
+            self._font_options_loaded = True
+        self.font_combo.setItemText(0, "글꼴 선택" if mode == "text" else
+                                   "내장 글꼴 유지" if mode == "object" else "원본 글꼴 유지")
+        self.font_combo.model().item(0).setEnabled(mode != "text")
+        if mode == "text":
+            settings = QSettings(str(self.data_dir / "preferences.ini"), QSettings.Format.IniFormat)
+            key = settings.value("lastTextFont", default_font_id(), type=str)
+            if self.font_combo.findData(key) < 0:
+                key = default_font_id()
+            self.set_font_choice(key if self.font_combo.findData(key) >= 0 else None)
+        else:
+            self.set_font_choice(None)
+
+    def font_changed(self, *_):
+        key = self.selected_font_id
+        if key:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            settings = QSettings(str(self.data_dir / "preferences.ini"), QSettings.Format.IniFormat)
+            settings.setValue("lastTextFont", key)
+            self.font_label.setText("선택한 글꼴을 PDF에 내장합니다. 한글 지원은 미리보기에서 확인하세요.")
+        elif self.mode == "edit" and self.selected:
+            self.font_label.setText(f"원본 글꼴: {self.selected.font}\n새 글자가 없으면 맑은 고딕으로 대체합니다.")
+        elif self.mode == "object" and self.selected_object:
+            self.font_label.setText("내장 글꼴: " + self.selected_object.get("font_name", "맑은 고딕"))
+        self.draft_changed()
+
     def bind_shortcuts(self):
         for keys, callback in [("Ctrl+O", self.open_dialog), ("Ctrl+Shift+S", self.save_as),
                                ("Ctrl+S", self.save_as), ("Ctrl+Z", self.undo),
@@ -852,6 +912,7 @@ class MainWindow(QMainWindow):
         draft = None
         if self.has_draft:
             draft = dict(mode=self.mode, text=self.editor.toPlainText(), size=self.size_input.value(),
+                         font_id=self.selected_font_id,
                          color=[self.ink.redF(), self.ink.greenF(), self.ink.blueF()],
                          area=list(self.area) if self.area is not None else None,
                          selected=asdict(self.selected) if self.selected else None,
@@ -950,6 +1011,10 @@ class MainWindow(QMainWindow):
                     raise EditError("복구 입력 정보가 올바르지 않습니다.")
                 if not 5 <= draft["size"] <= 160 or len(draft["color"]) != 3 or not all(0 <= v <= 1 for v in draft["color"]):
                     raise EditError("복구 글자 서식이 올바르지 않습니다.")
+                if draft.get("font_id") is not None:
+                    if not isinstance(draft["font_id"], str):
+                        raise EditError("복구 글꼴 정보가 올바르지 않습니다.")
+                    font_bytes(draft["font_id"])
                 if draft["area"] is not None:
                     box = fitz.Rect(draft["area"])
                     if not all(math.isfinite(v) for v in box):
@@ -995,6 +1060,9 @@ class MainWindow(QMainWindow):
                     self.select_object(draft["object_id"])
                 if draft["area"] is not None:
                     self.set_area(fitz.Rect(draft["area"]))
+                if draft.get("font_id") is not None:
+                    self.set_font_choice(draft["font_id"])
+                    self.font_label.setText("선택한 글꼴을 PDF에 내장합니다. 한글 지원은 미리보기에서 확인하세요.")
                 self.editor.setPlainText(draft["text"])
                 self.size_input.setValue(draft["size"])
                 self.ink = QColor.fromRgbF(*draft["color"])
@@ -1086,6 +1154,8 @@ class MainWindow(QMainWindow):
                  "object": "추가한 항목을 선택하세요. 안쪽은 이동, 모서리는 크기 조절입니다."}
         self.panel_title.setText(titles[mode])
         self.panel_hint.setText(hints[mode])
+        if mode in ("edit", "text", "object"):
+            self.configure_font_picker(mode)
         self.editor.setVisible(mode in ("edit", "text"))
         self.font_label.setVisible(mode in ("edit", "text"))
         self.size_input.setEnabled(mode in ("edit", "text"))
@@ -1096,7 +1166,7 @@ class MainWindow(QMainWindow):
             self.size_input.setValue(14)
             self.ink = QColor("#203545")
             self.color_button.setStyleSheet(f"color: {self.ink.name()};")
-            self.font_label.setText("글꼴: 맑은 고딕")
+            self.font_label.setText("선택한 글꼴을 PDF에 내장합니다. 한글 지원은 미리보기에서 확인하세요.")
         for key, spin in self.geometry_inputs.items():
             spin.setEnabled(mode != "edit" or key == "width")
         self.view.show_page(True)
@@ -1123,6 +1193,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("문서가 바뀌었습니다. 수정할 글자를 다시 선택하세요.", 5000)
             return
         self.selected = span
+        self.set_font_choice(None)
         self.editor.setPlainText(span.text)
         self.size_input.setValue(span.size)
         self.ink = QColor.fromRgbF(*rgb(span.color))
@@ -1151,11 +1222,12 @@ class MainWindow(QMainWindow):
         self.selected_object = item
         self.selected = None
         if item["kind"] == "text":
+            self.set_font_choice(None)
             self.editor.setPlainText(item["text"])
             self.size_input.setValue(item["size"])
             self.ink = QColor.fromRgbF(*item["color"])
             self.color_button.setStyleSheet(f"color: {self.ink.name()};")
-            self.font_label.setText("추가한 텍스트 · 맑은 고딕")
+            self.font_label.setText("내장 글꼴: " + item.get("font_name", "맑은 고딕"))
         else:
             self.editor.clear()
         self.set_area(fitz.Rect(item["rect"]))
@@ -1214,12 +1286,12 @@ class MainWindow(QMainWindow):
             if self.mode == "object":
                 pix = self.model.preview_object(self.page_number, self.selected_object["id"], self.area,
                     self.editor.toPlainText(), self.size_input.value(),
-                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale())
+                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale(), self.selected_font_id)
                 result = None
             else:
                 pix, result = self.model.preview_text(
                     self.page_number, self.area, self.editor.toPlainText(), self.size_input.value(),
-                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale(), self.selected)
+                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale(), self.selected, self.selected_font_id)
             self.view.page_item.setPixmap(pixmap_from_fitz(pix))
             self.view.preview_rendered = True
             message = "미리보기 · 아직 문서에 적용하지 않았습니다."
@@ -1259,7 +1331,7 @@ class MainWindow(QMainWindow):
 
     def draft_signature(self):
         return (self.editor.toPlainText(), self.size_input.value(), self.ink.rgb(),
-                tuple(self.area) if self.area is not None else None)
+                tuple(self.area) if self.area is not None else None, self.selected_font_id)
 
     @property
     def has_draft(self):
@@ -1304,12 +1376,12 @@ class MainWindow(QMainWindow):
             result = None
             if self.mode == "object" and self.selected_object:
                 self.model.update_object(self.page_number, self.selected_object["id"], self.area,
-                    self.editor.toPlainText(), self.size_input.value(), color)
+                    self.editor.toPlainText(), self.size_input.value(), color, self.selected_font_id)
             elif self.mode == "edit" and self.selected:
                 result = self.model.replace_text(self.page_number, self.selected, self.editor.toPlainText(),
-                                                 self.size_input.value(), color, self.area.width)
+                                                 self.size_input.value(), color, self.area.width, self.selected_font_id)
             elif self.mode == "text":
-                self.model.add_text(self.page_number, self.area, self.editor.toPlainText(), self.size_input.value(), color)
+                self.model.add_text(self.page_number, self.area, self.editor.toPlainText(), self.size_input.value(), color, self.selected_font_id)
             elif self.mode == "sign" and self.signature_data:
                 self.model.add_signature(self.page_number, self.area, self.signature_data)
             else:
@@ -1398,6 +1470,11 @@ class MainWindow(QMainWindow):
         self.redo_button.setEnabled(self.model.can_redo)
         self.apply_button.setEnabled(self.area is not None and (self.mode != "sign" or self.signature_data is not None))
         self.delete_object_button.setEnabled(self.selected_object is not None)
+        text_controls = self.mode in ("edit", "text") or (self.mode == "object" and self.selected_object is not None
+                                                           and self.selected_object["kind"] == "text")
+        self.font_combo.setVisible(text_controls)
+        self.font_caption.setVisible(text_controls)
+        self.font_combo.setEnabled(text_controls)
         if self.mode == "object":
             text_object = self.selected_object is not None and self.selected_object["kind"] == "text"
             self.editor.setVisible(text_object)

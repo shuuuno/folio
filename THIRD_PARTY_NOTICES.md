@@ -10,6 +10,7 @@ Paperlight는 개인 및 같은 조직 내부 팀 사용을 위해 만든 오프
 | PyInstaller | GPL 및 상업용 포함 실행 파일 배포 예외. https://pyinstaller.org/en/stable/license.html |
 | NSIS 3.12 | zlib/libpng, 압축 모듈별 라이선스 및 링크 예외. https://nsis.sourceforge.io/License |
 | Pretendard Variable 1.3.9 | SIL Open Font License 1.1. https://github.com/orioncactus/pretendard/tree/v1.3.9 |
+| fontTools | MIT. https://github.com/fonttools/fonttools/blob/main/LICENSE |
 
 정확한 패키지 버전은 `requirements-lock.txt`에 고정합니다. 실행 파일 옆 `licenses/`에는 설치된 패키지의 LICENSE/COPYING/NOTICE와 Python·NSIS 고지를 포함합니다. Qt는 `_internal` 아래 DLL로 동적 연결되며, 빌드 방법과 앱 소스는 같은 배포 버전의 Source ZIP에 제공합니다. 해당 컴포넌트의 수정·디버깅·재연결에 필요한 권리를 제한하는 별도 EULA를 추가하지 않습니다. 맑은 고딕 파일 자체는 배포하지 않으며 Windows에 설치된 글꼴을 사용합니다. 예제 PDF에는 표시용 부분 글꼴이 포함됩니다.
 

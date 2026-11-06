@@ -14,6 +14,7 @@ from PySide6.QtTest import QTest
 
 from paperlight.window import MainWindow
 from paperlight.signature import SignatureDialog
+from paperlight.fonts import default_font_id
 from fixtures import make_pdf
 
 
@@ -55,6 +56,63 @@ class UiTests(unittest.TestCase):
         point = self.window.view.mapFromScene(QPointF(p.x, p.y))
         QTest.mouseClick(self.window.view.viewport(), Qt.MouseButton.LeftButton, pos=point)
         APP.processEvents()
+
+    def test_font_picker_default_last_choice_and_font_only_draft(self):
+        w = self.window
+        w.set_mode("text")
+        self.assertEqual(w.selected_font_id, default_font_id())
+        bold = default_font_id(True)
+        w.font_combo.setCurrentIndex(w.font_combo.findData(bold))
+        self.assertEqual(w.selected_font_id, bold)
+        w.set_mode("view")
+        w.set_mode("text")
+        self.assertEqual(w.selected_font_id, bold)
+        other = MainWindow()
+        other.data_dir = w.data_dir
+        try:
+            other.open_file(self.source)
+            other.set_mode("text")
+            self.assertEqual(other.selected_font_id, bold)
+        finally:
+            other.confirm_discard = lambda: True
+            other.close()
+            other.model.doc.close()
+        w.set_mode("edit")
+        w.select_text(next(s for s in w.model.page_spans(0) if s.text == "담당자: 김하늘"))
+        self.assertIsNone(w.selected_font_id)
+        self.assertFalse(w.has_draft)
+        w.font_combo.setCurrentIndex(w.font_combo.findData(bold))
+        self.assertTrue(w.has_draft)
+        with patch.object(w, "_ask_draft_action", return_value="cancel"):
+            w.set_mode("view")
+        self.assertEqual(w.mode, "edit")
+        self.assertEqual(w.selected_font_id, bold)
+
+    def test_font_picker_preview_apply_save_and_object_reselect(self):
+        w = self.window
+        bold = default_font_id(True)
+        w.set_mode("text")
+        w.font_combo.setCurrentIndex(w.font_combo.findData(bold))
+        w.select_area(fitz.Rect(64, 480, 500, 555))
+        w.editor.setPlainText("선택한 글꼴로 한글 저장")
+        revision = w.model.revision
+        w.refresh_text_preview()
+        self.assertEqual(w.model.revision, revision)
+        self.assertTrue(w.view.preview_rendered)
+        self.assertTrue(w.apply_edit())
+        obj = w.model.page_objects(0)[0]
+        self.assertIn("Bold", obj["font_name"])
+        target = self.root / "chosen-font.pdf"
+        self.assertTrue(w.save_to(target))
+        self.assertTrue(w.open_file(target))
+        w.set_mode("object")
+        w.select_object(obj["id"])
+        self.assertIsNone(w.selected_font_id)
+        self.assertIn("Bold", w.font_label.text())
+        w.editor.setPlainText("다시 편집한 한글")
+        self.assertTrue(w.apply_edit())
+        self.assertIn("Bold", w.model.page_objects(0)[0]["font_name"])
+        self.assertEqual(self.errors, [])
 
     def drag_pdf(self, a, b):
         start = self.window.view.mapFromScene(QPointF(*a))

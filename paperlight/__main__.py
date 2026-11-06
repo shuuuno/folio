@@ -8,6 +8,9 @@ from .window import MainWindow
 
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] in ("--verify-font-picker", "--verify-font-picker-native"):
+        from .verify_fonts import verify
+        sys.exit(verify(Path(sys.argv[2]), native=sys.argv[1] == "--verify-font-picker-native"))
     if len(sys.argv) == 4 and sys.argv[1] == "--verify-recovery-from":
         from .verify_recovery import verify
         sys.exit(verify(Path(sys.argv[3]), worker_executable=Path(sys.argv[2])))

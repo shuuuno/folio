@@ -19,6 +19,7 @@ Windows 개인용 오프라인 PDF 뷰어·편집기. 한국어 UI. 문서 외�
 - 미적용 입력은 저장에 포함하고 페이지·도구 전환 시 적용/버리기/취소로 보호한다. 미리보기는 현재 페이지만 복제하며 본문·실행 취소 이력을 바꾸지 않는다.
 - 읽기 선택은 `selection.py`의 PDF 문자 좌표를 사용하며 문서를 바꾸지 않는다. 복사는 PDF_PERM_COPY를 확인하고 테스트는 실제 사용자 클립보드를 덮어쓰지 않는다.
 - 본문 제거 후 주변 문자 좌표도 비교한다. 일부 CFF 내장 글꼴은 glyph 존재만으로 재사용할 수 없으므로 임시 PDF에서 문자 매핑을 확인한다.
+- `fonts.py`는 Windows 설치 TTF/OTF/TTC/OTC의 OS/2 fsType을 검사한다. 편집 가능한 글꼴만 선택하며 전체 내장으로 no-subsetting을 지킨다. 기본은 맑은 고딕, 마지막 선택은 데이터 폴더의 `preferences.ini`에 저장한다. 배치 항목 재편집과 본문 수정 시 기존 내장 글꼴을 보존한다.
 - 공개 문서 회귀: `.venv\Scripts\python.exe scripts/check_compatibility.py` (별도 `research/corpus/` 필요, 출처·해시는 `research/corpus-sources.json`). Qt 합성 이벤트 시험을 실제 Windows IME·탐색기 조작으로 보고하지 않는다.
 - `objects.py`는 추가 항목을 독립 PDF 콘텐츠 스트림과 검증된 식별 정보로 저장한다. 항목 삭제 시 공유 Resources 사전을 복제하며 다른 페이지를 변경하지 않는다. 본문 제거 작업은 관리 항목을 분리한 뒤 복원해 재편집 정보를 보존한다.
 - 배치 편집은 0.5부터 생성한 항목만 지원한다. 저장·재개방, 겹친 항목, 회전/CropBox, 원래 본문·이미지 보존, 실패 시 롤백을 함께 검증한다.
