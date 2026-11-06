@@ -1,4 +1,4 @@
-# Paperlight
+# Folio
 
 Windows 개인용 오프라인 PDF 뷰어·편집기. 한국어 UI. 문서 외부 전송 없음.
 
@@ -24,3 +24,5 @@ Windows 개인용 오프라인 PDF 뷰어·편집기. 한국어 UI. 문서 외�
 - 배치 편집은 0.5부터 생성한 항목만 지원한다. 저장·재개방, 겹친 항목, 회전/CropBox, 원래 본문·이미지 보존, 실패 시 롤백을 함께 검증한다.
 - `recovery.py`는 창별 QLockFile(stale time 0), PDF+입력 상태 단일 복구본, fsync·검증 후 원자 교체를 사용한다. 약 5초마다 변경 시에만 저장하며 읽기 전용 문서는 제외한다. 저장 성공·명시적 버리기에서만 해당 창의 복구본을 정리한다.
 - 복구/네이티브 QA는 반드시 `window.data_dir`를 증거 폴더 아래로 격리한다. `.venv\Scripts\python.exe -m paperlight --verify-recovery-native evidence\recovery-check`는 자체 검증용 자식만 강제 종료하고 Windows 복구 창을 표시한다. 사용자 프로세스를 종료하지 않는다.
+
+- 0.10부터 배포 이름은 Folio/Folio.exe. Python 패키지, QSettings 조직·앱 이름, 데이터 경로, IPC 이름, PDF 내부 객체 키, Paperlight.PDF ProgID, 제거 등록 키는 호환을 위해 유지한다. Windows 표시명은 Folio이며 RegisteredApplications 후보 이름은 Folio다. 구버전 업그레이드 QA는 `scripts/verify_installer.py --upgrade-from <이전 Setup.exe>`로 확인한다.

@@ -108,9 +108,17 @@ class RecoveryDialog(QDialog):
         self.setWindowTitle("이전 작업 복구")
         self.resize(560, 330)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 20)
+        layout.setSpacing(12)
+        title = QLabel("이전 작업 복구")
+        title.setObjectName("sectionTitle")
+        layout.addWidget(title)
         explanation = QLabel("저장되지 않은 작업의 복구본이 있습니다.\n원본을 바꾸지 않고 마지막 복구본에서 이어갑니다.")
+        explanation.setObjectName("muted")
+        explanation.setWordWrap(True)
         layout.addWidget(explanation)
         self.list = QListWidget()
+        self.list.setAccessibleName("저장되지 않은 작업")
         for record in records:
             name = Path(record["source"]).name
             try:
@@ -128,6 +136,9 @@ class RecoveryDialog(QDialog):
             button = QPushButton(label)
             button.clicked.connect(lambda checked=False, value=action: self.choose(value))
             buttons.addWidget(button)
+            if action == "discard":
+                button.setObjectName("danger")
+                buttons.addStretch()
             if action == "recover":
                 button.setObjectName("primary")
                 button.setDefault(True)

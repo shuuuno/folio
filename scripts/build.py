@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--dist-dir", type=Path, default=ROOT / "dist")
 args = parser.parse_args()
 os.chdir(ROOT)
-target = args.dist_dir.resolve() / "Paperlight"
+target = args.dist_dir.resolve() / "Folio"
 (ROOT / "build").mkdir(exist_ok=True)
 version_tuple = tuple(map(int, __version__.split("."))) + (0,)
 version_file = ROOT / "build" / "version.txt"
@@ -22,15 +22,15 @@ version_file.write_text(f'''VSVersionInfo(
   ffi=FixedFileInfo(filevers={version_tuple}, prodvers={version_tuple},
     mask=0x3f, flags=0, OS=0x40004, fileType=1, subtype=0, date=(0,0)),
   kids=[StringFileInfo([StringTable('040904B0', [
-    StringStruct('FileDescription', 'Paperlight PDF Editor'),
+    StringStruct('FileDescription', 'Folio PDF Editor'),
     StringStruct('FileVersion', '{__version__}'),
-    StringStruct('ProductName', 'Paperlight'),
+    StringStruct('ProductName', 'Folio'),
     StringStruct('ProductVersion', '{__version__}'),
-    StringStruct('OriginalFilename', 'Paperlight.exe')])]),
+    StringStruct('OriginalFilename', 'Folio.exe')])]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])])
 ''', encoding="utf-8")
 command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed",
-           "--name", "Paperlight", "--distpath", str(target.parent),
+           "--name", "Folio", "--distpath", str(target.parent),
            "--icon", "assets/paperlight.ico", "--version-file", str(version_file),
            "--add-data", "assets/paperlight.ico;assets", "--add-data", "assets/fonts;assets/fonts",
            "--add-data", "assets/ui;assets/ui",
@@ -51,4 +51,4 @@ for package in ("PyMuPDF", "PySide6-Essentials", "shiboken6", "PyInstaller", "py
             dest.parent.mkdir(exist_ok=True)
             shutil.copy2(dist.locate_file(item), dest)
 shutil.copy2(Path(sys.base_prefix) / "LICENSE.txt", licenses / "Python-LICENSE.txt")
-print(f"완료: {target / 'Paperlight.exe'}")
+print(f"완료: {target / 'Folio.exe'}")

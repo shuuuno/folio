@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QPointF, QBuffer, QIODevice
+from PySide6.QtCore import Qt, QPointF, QBuffer, QIODevice, Signal
 from PySide6.QtGui import QImage, QPainter, QPen, QColor
 from PySide6.QtWidgets import (QWidget, QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QFileDialog, QMessageBox)
@@ -14,6 +14,8 @@ def png_bytes(image):
 
 
 class InkPad(QWidget):
+    changed = Signal(bool)
+
     def __init__(self):
         super().__init__()
         self.setMinimumSize(560, 240)
@@ -27,6 +29,8 @@ class InkPad(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.fillRect(self.rect(), QColor("#ffffff"))
+        p.setPen(QPen(QColor("#E1E5ED"), 1))
+        p.drawRect(self.rect().adjusted(0, 0, -1, -1))
         p.setPen(QPen(QColor("#dbe3e8"), 1, Qt.PenStyle.DashLine))
         p.drawLine(24, int(self.height() * .72), self.width() - 24, int(self.height() * .72))
         p.drawImage(self.rect(), self.image)
@@ -61,11 +65,13 @@ class InkPad(QWidget):
                 self.bounds = [min(x, self.bounds[0]), min(y, self.bounds[1]),
                                max(x, self.bounds[2]), max(y, self.bounds[3])]
         self.last, self.has_ink = point, True
+        self.changed.emit(True)
         self.update()
 
     def clear(self):
         self.image.fill(Qt.GlobalColor.transparent)
         self.has_ink, self.bounds = False, None
+        self.changed.emit(False)
         self.update()
 
     def result(self):
@@ -86,14 +92,17 @@ class SignatureDialog(QDialog):
         self.resize(620, 390)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
-        title = QLabel("나만의 서명")
+        layout.setSpacing(12)
+        title = QLabel("서명 만들기")
         title.setObjectName("sectionTitle")
         layout.addWidget(title)
-        layout.addWidget(QLabel("아래에 그리거나, 가지고 있는 서명 이미지를 가져오세요."))
+        layout.addWidget(QLabel("아래에 서명을 그리거나 PNG·JPG 이미지를 선택하세요."))
         self.pad = InkPad()
         layout.addWidget(self.pad)
         row = QHBoxLayout()
         clear = QPushButton("다시 그리기")
+        clear.setEnabled(False)
+        self.pad.changed.connect(clear.setEnabled)
         clear.clicked.connect(self.pad.clear)
         row.addWidget(clear)
         load = QPushButton("이미지 가져오기")
@@ -105,12 +114,16 @@ class SignatureDialog(QDialog):
             row.addWidget(reuse)
         row.addStretch()
         use = QPushButton("이 서명 사용")
+        self.use_button = use
+        use.setEnabled(False)
+        self.pad.changed.connect(use.setEnabled)
         use.setObjectName("primary")
         use.clicked.connect(self.use)
         row.addWidget(use)
         layout.addLayout(row)
         hint = QLabel("서명은 이 PC에만 저장됩니다. 인증서 전자서명이 아닌 이미지 서명입니다.")
         hint.setObjectName("muted")
+        hint.setWordWrap(True)
         layout.addWidget(hint)
 
     def finish_image(self, image):

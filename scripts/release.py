@@ -50,9 +50,9 @@ def main():
         raise SystemExit("배포 전에 검토한 소스를 커밋하세요. 작업 트리가 변경되어 있습니다.")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     compiler = nsis_compiler()
-    payload = ROOT / "build" / "distribution" / "Paperlight"
+    payload = ROOT / "build" / "distribution" / "Folio"
     subprocess.run([sys.executable, "scripts/build.py", "--dist-dir", str(payload.parent)], cwd=ROOT, check=True)
-    if not (payload / "Paperlight.exe").is_file():
+    if not (payload / "Folio.exe").is_file():
         raise SystemExit("포터블 빌드가 없습니다.")
     if subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip() or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip() != commit:
         raise SystemExit("빌드 중 소스가 변경되었습니다. 새 커밋에서 다시 빌드하세요.")
@@ -69,13 +69,13 @@ def main():
         + [f'RMDir "$INSTDIR\\{nsis_quote(p)}"' for p in directories]), encoding="utf-8-sig")
     release = ROOT / "release" / __version__
     release.mkdir(parents=True, exist_ok=True)
-    setup = release / f"Paperlight-{__version__}-Setup.exe"
+    setup = release / f"Folio-{__version__}-Setup.exe"
     subprocess.run([str(compiler), "/V2", "/INPUTCHARSET", "UTF8", f"/DAPP_VERSION={__version__}",
                     f"/DPAYLOAD={payload}", f"/DOWNED_FILES={owned}", f"/DOUTPUT={setup}",
                     str(ROOT / "packaging" / "paperlight.nsi")], check=True)
-    portable = Path(shutil.make_archive(str(release / f"Paperlight-{__version__}-Portable"), "zip", payload.parent, payload.name))
-    source = release / f"Paperlight-{__version__}-Source.zip"
-    subprocess.run(["git", "archive", "--format=zip", f"--prefix=Paperlight-{__version__}/",
+    portable = Path(shutil.make_archive(str(release / f"Folio-{__version__}-Portable"), "zip", payload.parent, payload.name))
+    source = release / f"Folio-{__version__}-Source.zip"
+    subprocess.run(["git", "archive", "--format=zip", f"--prefix=Folio-{__version__}/",
                     "-o", str(source), commit], cwd=ROOT, check=True)
     (release / "SHA256SUMS.txt").write_text("".join(f"{sha256(p)}  {p.name}\n" for p in (setup, portable, source)), encoding="utf-8")
     print(f"배포 파일: {release}\n소스 커밋: {commit}")

@@ -32,7 +32,8 @@ def verify(output, native=False):
     shutil.copy2(first, second)
     settings = QSettings(str(output / "settings.ini"), QSettings.Format.IniFormat)
     window = Workspace(data_dir=output / "data", settings=settings, tray_enabled=native)
-    result = dict(passed=False, version=__version__, frozen=bool(getattr(sys, "frozen", False)), native=native)
+    result = dict(passed=False, version=__version__, frozen=bool(getattr(sys, "frozen", False)), native=native,
+                  device_pixel_ratio=window.devicePixelRatioF())
     errors = []
     old_hook = sys.excepthook
     sys.excepthook = lambda *exc: errors.append("".join(traceback.format_exception(*exc)))
@@ -103,6 +104,19 @@ def verify(output, native=False):
         first_tab.select_text(next(s for s in first_tab.model.page_spans(0) if s.text == "담당자: 김하늘"))
         settle()
         window.grab().save(str(output / "compact-selected.png"))
+        window.resize(960, 640)
+        settle()
+        assert window.width() == 960 and window.height() == 640, "노트북 창 최소 크기 초과"
+        assert first_tab.view.horizontalScrollBar().maximum() == 0
+        first_tab.inspector.ensureWidgetVisible(first_tab.apply_button)
+        settle()
+        assert first_tab.inspector.horizontalScrollBar().maximum() == 0, "속성 패널 가로 잘림"
+        center = first_tab.apply_button.mapTo(first_tab.inspector.viewport(), first_tab.apply_button.rect().center())
+        assert first_tab.inspector.viewport().rect().contains(center), "노트북 창 적용 버튼 접근 불가"
+        window.grab().save(str(output / "laptop.png"))
+        result["laptop_960x640_apply_and_fit"] = True
+        window.resize(1050, 760)
+        first_tab.inspector.verticalScrollBar().setValue(0)
         from unittest.mock import patch
         with patch.object(first_tab, "choose_signature"):
             first_tab.set_mode("sign")

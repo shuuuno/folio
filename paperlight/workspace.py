@@ -36,8 +36,8 @@ class Workspace(QMainWindow):
         header = QWidget()
         header.setObjectName("appHeader")
         row = QHBoxLayout(header)
-        row.setContentsMargins(20, 10, 18, 10)
-        row.setSpacing(10)
+        row.setContentsMargins(16, 6, 12, 6)
+        row.setSpacing(8)
         file_button = QToolButton()
         file_button.setText("파일")
         file_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -71,13 +71,14 @@ class Workspace(QMainWindow):
         layout.addWidget(self.tabs, 1)
         self.setWindowTitle(DISPLAY_NAME)
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets/paperlight.ico")))
-        self.resize(1400, 960)
-        self.setMinimumSize(1050, 760)
+        available = self.screen().availableGeometry()
+        self.setMinimumSize(960, 640)
+        self.resize(min(1400, available.width()), min(960, available.height()))
         self.setStyleSheet(STYLE)
         files = QMenu(self)
         file_button.setMenu(files)
         files.addAction("PDF 여러 개 열기", lambda: self.current.open_dialog())
-        files.addAction("다른 이름으로 저장…", lambda: self.current.save_as())
+        self.save_action = files.addAction("다른 이름으로 저장…", lambda: self.current.save_as())
         files.addAction("작업 복구…", lambda: self.current.offer_recovery())
         files.addSeparator()
         close = files.addAction("현재 탭 닫기", lambda: self.close_tab(self.tabs.currentIndex()))
@@ -168,6 +169,7 @@ class Workspace(QMainWindow):
         if editor is self.current:
             self.setWindowTitle(editor.windowTitle())
             self.save_button.setEnabled(editor.save_button.isEnabled())
+            self.save_action.setEnabled(editor.save_button.isEnabled())
             self.document_state.setText("저장하지 않은 변경" if editor.model.dirty or editor.has_draft else "")
 
     def active_changed(self, index):
@@ -269,8 +271,8 @@ class Workspace(QMainWindow):
         from .windows_integration import register_pdf_app
         try:
             register_pdf_app()
-            if not QDesktopServices.openUrl(QUrl("ms-settings:defaultapps?registeredAppUser=Paperlight")):
-                raise RuntimeError("Windows 설정을 열지 못했습니다. 설정 → 앱 → 기본 앱에서 Paperlight를 선택하세요.")
+            if not QDesktopServices.openUrl(QUrl("ms-settings:defaultapps?registeredAppUser=Folio")):
+                raise RuntimeError("Windows 설정을 열지 못했습니다. 설정 → 앱 → 기본 앱에서 Folio를 선택하세요.")
         except Exception as exc:
             QMessageBox.warning(self, "기본 앱 설정", str(exc))
 

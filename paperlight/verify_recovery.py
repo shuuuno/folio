@@ -46,7 +46,7 @@ def worker(output):
     return app.exec()
 
 
-def verify(output, native=False):
+def verify(output, native=False, worker_executable=None):
     os.environ["QT_QPA_PLATFORM"] = "windows" if native else "offscreen"
     from PySide6.QtCore import QTimer, QEventLoop
     import pymupdf as fitz
@@ -64,8 +64,8 @@ def verify(output, native=False):
     original = sha256(source.read_bytes()).hexdigest()
     ready = output / "worker-ready.json"
     ready.unlink(missing_ok=True)
-    command = [sys.executable]
-    if not getattr(sys, "frozen", False):
+    command = [str(worker_executable or sys.executable)]
+    if worker_executable is None and not getattr(sys, "frozen", False):
         command += ["-m", "paperlight"]
     command += ["--verify-recovery-worker", str(output)]
     window = None
@@ -158,6 +158,7 @@ def verify(output, native=False):
                       live_session_excluded=True, startup_dialog_restored=True, pending_input_restored=True,
                       text_and_signature_restored=True, object_reedited=True, save_reopen_passed=True,
                       snapshot_cleared_after_save=True, original_unchanged=True,
+                      legacy_worker=bool(worker_executable),
                       interaction="Qt 내부 호출, 외부 OS 입력 자동화 아님")
         (output / "recovery-check.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return 0
@@ -171,4 +172,8 @@ def verify(output, native=False):
         if window:
             window.confirm_discard = lambda: True
             window.close()
+            # QApplication보다 먼저 창과 그 자식 타이머를 정리한다.
+            from shiboken6 import delete
+            delete(window)
+        chooser = None
         sys.excepthook = old_hook

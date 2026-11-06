@@ -193,10 +193,71 @@ class WorkspaceTests(unittest.TestCase):
             server.close()
 
     def test_registration_quotes_unicode_path_without_userchoice(self):
-        values = registration_values(self.root / "한글 폴더" / "Paperlight.exe")
+        values = registration_values(self.root / "한글 폴더" / "Folio.exe")
         command = next(value for path, name, value in values if path.endswith("open\\command"))
-        self.assertEqual(command, f'"{self.root / "한글 폴더" / "Paperlight.exe"}" "%1"')
+        self.assertEqual(command, f'"{self.root / "한글 폴더" / "Folio.exe"}" "%1"')
         self.assertFalse(any("UserChoice" in path for path, _, _ in values))
+        self.assertIn((r"Software\Classes\.pdf\OpenWithProgids", "Paperlight.PDF", ""), values)
+        self.assertIn((r"Software\Paperlight\Capabilities", "ApplicationName", "Folio"), values)
+        self.assertIn((r"Software\RegisteredApplications", "Folio", r"Software\Paperlight\Capabilities"), values)
+
+    def test_document_controls_follow_empty_tab_and_page_limits(self):
+        empty = self.window.current
+        self.assertTrue(all(not w.isEnabled() for w in empty.document_controls))
+        self.assertFalse(self.window.save_action.isEnabled())
+        self.window.open_files([self.a])
+        editor = self.window.current
+        self.assertTrue(editor.search_box.isEnabled())
+        self.assertFalse(editor.previous_page.isEnabled())
+        self.assertTrue(editor.next_page.isEnabled())
+        editor.next_page.click()
+        self.assertEqual(editor.page_number, 1)
+        self.assertTrue(editor.previous_page.isEnabled())
+        self.assertFalse(editor.next_page.isEnabled())
+        self.window.new_tab()
+        self.assertFalse(self.window.current.page_input.isEnabled())
+        self.assertFalse(self.window.save_action.isEnabled())
+
+    def test_conversion_options_follow_format_sources_and_current_tab(self):
+        from paperlight.conversion_dialog import ConversionDialog
+        dialog = ConversionDialog(self.window)
+        self.assertFalse(dialog.current_button.isEnabled())
+        self.assertFalse(dialog.start_button.isEnabled())
+        self.assertFalse(dialog.mode.isEnabled())
+        dialog.sources.addItem(str(self.a))
+        dialog.destination.setText(str(self.root))
+        self.assertTrue(dialog.start_button.isEnabled())
+        dialog.format.setCurrentIndex(dialog.format.findData("pdf"))
+        self.assertFalse(dialog.dpi.isEnabled())
+        self.assertFalse(dialog.mode.isEnabled())
+        dialog.format.setCurrentIndex(dialog.format.findData("docx"))
+        self.assertTrue(dialog.mode.isEnabled())
+        self.assertIn("표", dialog.format_hint.text())
+        dialog.mode.setCurrentIndex(1)
+        self.assertIn("편집할 수 없습니다", dialog.format_hint.text())
+        dialog.sources.clear()
+        self.assertFalse(dialog.start_button.isEnabled())
+        self.window.open_files([self.a])
+        dialog.show()
+        APP.processEvents()
+        self.assertTrue(dialog.current_button.isEnabled())
+        dialog.close()
+
+    def test_signature_action_follows_ink_and_clear(self):
+        from paperlight.signature import SignatureDialog
+        from PySide6.QtCore import QPointF
+        path = self.root / "data" / "signature.png"
+        dialog = SignatureDialog(self.window, path)
+        self.assertFalse(dialog.use_button.isEnabled())
+        dialog.pad.last = QPointF(10, 10)
+        dialog.pad.stroke(QPointF(30, 30))
+        self.assertTrue(dialog.use_button.isEnabled())
+        dialog.pad.clear()
+        self.assertFalse(dialog.use_button.isEnabled())
+        dialog.pad.last = QPointF(10, 10)
+        dialog.pad.stroke(QPointF(50, 30))
+        dialog.use_button.click()
+        self.assertTrue(path.read_bytes().startswith(b"\x89PNG"))
 
 
 if __name__ == "__main__":

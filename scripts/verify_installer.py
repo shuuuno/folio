@@ -1,4 +1,5 @@
 """기존 설치를 보호하며 별도 경로에서 실제 Windows 설치·실행·제거를 확인한다."""
+import argparse
 import hashlib
 import json
 import os
@@ -39,41 +40,101 @@ def registry_value(path, name):
         return None
 
 
+def settings_snapshot():
+    values = {}
+    def visit(path):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, path) as key:
+                subkeys, count, _ = winreg.QueryInfoKey(key)
+                for i in range(count):
+                    name, value, kind = winreg.EnumValue(key, i)
+                    values[(path, name)] = (value, kind)
+                for i in range(subkeys):
+                    visit(path + "\\" + winreg.EnumKey(key, i))
+        except FileNotFoundError:
+            pass
+    visit(r"Software\Paperlight\Paperlight")
+    return values
+
+
 def run(command, timeout=90):
     return subprocess.run(command, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW).returncode
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--upgrade-from", type=Path, help="이전 Paperlight 설치판에서 업데이트 검증")
+    args = parser.parse_args()
     # 실제 설치가 있으면 등록 정보·시작 메뉴를 일시적으로라도 덮지 않는다.
-    shortcut_dir = Path(os.environ["APPDATA"]) / "Microsoft/Windows/Start Menu/Programs/Paperlight"
-    if registration() or registration(winreg.KEY_WOW64_64KEY) or shortcut_dir.exists():
-        raise SystemExit("기존 Paperlight 설치/시작 메뉴가 있어 중단합니다. 깨끗한 Windows 계정에서 검증하세요.")
-    if registry_value(r"Software\RegisteredApplications", "Paperlight") is not None:
-        raise SystemExit("Paperlight 기본 앱 후보 등록이 이미 있습니다. 이를 보존하기 위해 검증을 중단합니다.")
+    shortcut_dir = Path(os.environ["APPDATA"]) / "Microsoft/Windows/Start Menu/Programs/Folio"
+    legacy_shortcut = shortcut_dir.with_name("Paperlight")
+    if registration() or registration(winreg.KEY_WOW64_64KEY) or shortcut_dir.exists() or legacy_shortcut.exists():
+        raise SystemExit("기존 Folio/Paperlight 설치/시작 메뉴가 있어 중단합니다. 깨끗한 Windows 계정에서 검증하세요.")
+    if any(registry_value(r"Software\RegisteredApplications", name) is not None for name in ("Paperlight", "Folio")):
+        raise SystemExit("Folio/Paperlight 기본 앱 후보 등록이 이미 있습니다. 이를 보존하기 위해 검증을 중단합니다.")
     choice_path = r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice"
     user_choice = (registry_value(choice_path, "ProgId"), registry_value(choice_path, "Hash"))
     output = ROOT / "evidence" / ("installer-" + uuid.uuid4().hex[:8])
     output.mkdir(parents=True)
     target = (ROOT / "build" / "installer-qa" / output.name / "한글 경로 Paperlight").resolve()
     assert target.is_relative_to((ROOT / "build" / "installer-qa").resolve()) and not target.exists()
-    setup = ROOT / "release" / __version__ / f"Paperlight-{__version__}-Setup.exe"
-    payload = ROOT / "build" / "distribution" / "Paperlight"
+    setup = ROOT / "release" / __version__ / f"Folio-{__version__}-Setup.exe"
+    payload = ROOT / "build" / "distribution" / "Folio"
     profile = Path(os.environ["LOCALAPPDATA"]) / "Paperlight/Paperlight"
+    settings_before = settings_snapshot()
     before = {str(p.relative_to(profile)): digest(p) for p in profile.rglob("*") if p.is_file()}
     result = {"passed": False, "version": __version__, "install_path": str(target)}
     child = None
     installed = False
     uninstaller_copy = output / "uninstall-check.exe"
     try:
-        assert run(f'"{setup}" /S /D={target}') == 0, "설치 실패"
+        legacy_copy = None
+        if args.upgrade_from:
+            old_setup = args.upgrade_from.resolve(strict=True)
+            assert run(f'"{old_setup}" /S /D={target}') == 0, "이전 설치 실패"
+            installed = True
+            assert (target / "Paperlight.exe").is_file() and (legacy_shortcut / "Paperlight.lnk").exists()
+            assert registration()["InstallLocation"] == str(target)
+            legacy_copy = output / "legacy-app"
+            shutil.copytree(target, legacy_copy)
+            (target / "업데이트-보존.txt").write_text("업데이트 전 사용자 파일", encoding="utf-8")
+            # 이전 실행 파일이 사용 중일 때도 새 설치는 파일 변경 전에 차단한다.
+            old_busy = output / "legacy-busy"
+            old_busy.mkdir()
+            shutil.copy2(target / "시작하기.pdf", old_busy / "복구실험원본.pdf")
+            child = subprocess.Popen([str(target / "Paperlight.exe"), "--verify-recovery-worker", str(old_busy)], creationflags=subprocess.CREATE_NO_WINDOW)
+            deadline = time.monotonic() + 30
+            while not (old_busy / "worker-ready.json").exists() and child.poll() is None and time.monotonic() < deadline:
+                time.sleep(.05)
+            assert (old_busy / "worker-ready.json").exists()
+            old_hash = digest(target / "Paperlight.exe")
+            assert run(f'"{setup}" /S /D={target}') != 0
+            assert digest(target / "Paperlight.exe") == old_hash
+            child.kill()
+            child.wait(timeout=10)
+            child = None
+            result["running_legacy_update_blocked"] = True
+        # 업데이트는 /D 없이 이전 등록 위치를 자동 선택하는 것도 확인한다.
+        install_command = f'"{setup}" /S' if args.upgrade_from else f'"{setup}" /S /D={target}'
+        assert run(install_command) == 0, "설치 실패"
         installed = True
-        executable = target / "Paperlight.exe"
+        executable = target / "Folio.exe"
         assert registration() == dict(InstallLocation=str(target), DisplayVersion=__version__)
-        assert (shortcut_dir / "Paperlight.lnk").is_file()
-        assert (shortcut_dir / "Paperlight 제거.lnk").is_file()
+        assert (shortcut_dir / "Folio.lnk").is_file()
+        assert (shortcut_dir / "Folio 제거.lnk").is_file()
         expected = {str(p.relative_to(payload)): digest(p) for p in payload.rglob("*") if p.is_file()}
         assert all((target / rel).is_file() and digest(target / rel) == h for rel, h in expected.items())
         result.update(installed_files_match=True, registered_version=True, start_menu=True)
+        assert registry_value(r"Software\Paperlight\Capabilities", "ApplicationName") == "Folio"
+        assert registry_value(r"Software\RegisteredApplications", "Paperlight") is None
+        if legacy_copy:
+            assert not (target / "Paperlight.exe").exists() and not legacy_shortcut.exists()
+            assert (target / "업데이트-보존.txt").read_text(encoding="utf-8") == "업데이트 전 사용자 파일"
+            assert run([str(executable), "--verify-recovery-from", str(legacy_copy / "Paperlight.exe"), str(output / "legacy-recovery")], timeout=120) == 0
+            recovery = json.loads((output / "legacy-recovery/recovery-check.json").read_text(encoding="utf-8"))
+            assert recovery["passed"] and recovery["legacy_worker"]
+            result.update(legacy_install_upgraded=True, legacy_draft_signature_and_pdf_objects_restored=True,
+                          legacy_progid_preserved=True, legacy_shortcuts_replaced=True)
         for path, name, value in registration_values(executable):
             assert registry_value(path, name) == value, path
         assert user_choice == (registry_value(choice_path, "ProgId"), registry_value(choice_path, "Hash"))
@@ -110,7 +171,7 @@ def main():
             sentinel.write_text("keep user data", encoding="utf-8")
         assert run(f'"{setup}" /S /D={target}') == 0, "재설치 실패"
         assert root_sentinel.read_text(encoding="utf-8") == "keep user data"
-        assert digest(executable) == expected["Paperlight.exe"]
+        assert digest(executable) == expected["Folio.exe"]
         result["reinstall_preserves_user_file"] = True
         shutil.copy2(target / "Uninstall.exe", uninstaller_copy)
         assert run(f'"{uninstaller_copy}" /S _?={target}') == 0, "제거 실패"
@@ -124,6 +185,8 @@ def main():
         assert not any((target / rel).exists() for rel in expected), "프로그램 파일이 남았습니다"
         assert all(p.read_text(encoding="utf-8") == "keep user data" for p in (root_sentinel, nested_sentinel))
         after = {str(p.relative_to(profile)): digest(p) for p in profile.rglob("*") if p.is_file()}
+        assert settings_before == settings_snapshot(), "사용자 설정 변경"
+        result["user_settings_unchanged"] = True
         assert before == after, "사용자 데이터가 변경되었습니다. 실행 중 사용자 작업 여부를 확인하세요."
         result.update(uninstalled_owned_files=True, user_files_preserved=True,
                       user_profile_unchanged=True, passed=True)

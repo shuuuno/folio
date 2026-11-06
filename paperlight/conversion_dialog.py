@@ -6,7 +6,7 @@ import tempfile
 from PySide6.QtCore import QProcess, QUrl, Signal, Qt
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget,
-                              QComboBox, QLineEdit, QFileDialog, QProgressBar, QMessageBox)
+                              QComboBox, QLineEdit, QFileDialog, QProgressBar, QMessageBox, QFormLayout)
 
 
 class ConversionDialog(QDialog):
@@ -22,50 +22,72 @@ class ConversionDialog(QDialog):
         self.temporary = None
         self.outputs = []
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("PDF ↔ 이미지 · Word · PowerPoint"))
+        layout.setContentsMargins(24, 24, 24, 20)
+        layout.setSpacing(12)
+        title = QLabel("파일 변환")
+        title.setObjectName("sectionTitle")
+        layout.addWidget(title)
         row = QHBoxLayout()
         add = QPushButton("파일 선택")
         add.clicked.connect(self.choose_sources)
         row.addWidget(add)
         current = QPushButton("현재 탭의 PDF 사용")
+        self.current_button = current
         current.clicked.connect(self.use_current)
         row.addWidget(current)
+        row.addStretch()
         self.source_controls = [add, current]
         layout.addLayout(row)
         self.sources = QListWidget()
+        self.sources.setAccessibleName("변환할 파일")
+        self.sources.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+        self.sources.setMinimumHeight(90)
+        self.sources.setMaximumHeight(160)
         layout.addWidget(self.sources)
+        options = QFormLayout()
+        options.setHorizontalSpacing(20)
+        options.setVerticalSpacing(10)
+        options.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.format = QComboBox()
         for label, value in (("PDF (.pdf)", "pdf"), ("PNG — 페이지별 이미지", "png"),
                              ("JPG — 페이지별 이미지", "jpg"), ("Word (.docx)", "docx"), ("PowerPoint (.pptx)", "pptx")):
             self.format.addItem(label, value)
         self.format.setCurrentIndex(1)
-        layout.addWidget(self.format)
+        options.addRow("결과 형식", self.format)
         self.mode = QComboBox()
         self.mode.addItem("편집용 — 글자·이미지로 재구성", "editable")
         self.mode.addItem("모양 보존 — 페이지를 이미지로 넣기", "appearance")
-        layout.addWidget(self.mode)
+        options.addRow("Office 문서 구성", self.mode)
         self.dpi = QComboBox()
         for dpi in (96, 150, 300):
-            self.dpi.addItem(f"이미지 해상도 {dpi} DPI", dpi)
+            self.dpi.addItem(f"{dpi} DPI", dpi)
         self.dpi.setCurrentIndex(1)
-        layout.addWidget(self.dpi)
-        hint = QLabel("Word/PPT → PDF: Microsoft Office 또는 LibreOffice가 필요합니다.\n"
-                      "PDF → Word 편집용: 본문·그림 순서로 재구성하므로 표·단·배치가 달라질 수 있습니다.\n"
-                      "PDF → PPT 편집용: 가로 본문은 글자 상자, 도형은 배경으로 보존합니다. 회전/세로쓰기 페이지는 이미지로 유지합니다.\n"
-                      "스캔 PDF는 이미지로 유지되며 OCR은 하지 않습니다. 원본은 변경하지 않습니다.")
+        options.addRow("이미지 해상도", self.dpi)
+        layout.addLayout(options)
+        hint = self.format_hint = QLabel()
         hint.setWordWrap(True)
+        hint.setObjectName("muted")
+        hint.setMinimumHeight(42)
         layout.addWidget(hint)
         row = QHBoxLayout()
         self.destination = QLineEdit()
         self.destination.setPlaceholderText("결과 폴더")
+        self.destination.setAccessibleName("결과 폴더")
         row.addWidget(self.destination)
         browse = QPushButton("폴더 선택")
         browse.clicked.connect(self.choose_destination)
         row.addWidget(browse)
         self.source_controls += [self.format, self.mode, self.dpi, self.destination, browse]
-        layout.addLayout(row)
+        destination_form = QFormLayout()
+        destination_form.setHorizontalSpacing(20)
+        destination_form.addRow("저장 위치", row)
+        for form in (options, destination_form):
+            for index in range(form.rowCount()):
+                form.itemAt(index, QFormLayout.ItemRole.LabelRole).widget().setMinimumWidth(108)
+        layout.addLayout(destination_form)
         self.status = QLabel("파일을 선택하세요. 같은 이름의 결과는 덮어쓰지 않습니다.")
         self.status.setWordWrap(True)
+        self.status.setObjectName("muted")
         layout.addWidget(self.status)
         self.progress = QProgressBar()
         self.progress.setRange(0, 1)
@@ -74,27 +96,67 @@ class ConversionDialog(QDialog):
         self.start_button = QPushButton("변환 시작")
         self.start_button.setObjectName("primary")
         self.start_button.clicked.connect(self.start)
-        row.addWidget(self.start_button)
         self.cancel_button = QPushButton("변환 취소")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self.cancel)
-        row.addWidget(self.cancel_button)
         self.open_folder = QPushButton("결과 폴더 열기")
         self.open_folder.setEnabled(False)
         self.open_folder.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.destination.text())))
         row.addWidget(self.open_folder)
-        self.open_pdf = QPushButton("결과 PDF 탭으로 열기")
+        self.open_pdf = QPushButton("결과 PDF 열기")
         self.open_pdf.setEnabled(False)
         self.open_pdf.clicked.connect(lambda: [self.pdf_ready.emit(p) for p in self.outputs if p.lower().endswith(".pdf")])
         row.addWidget(self.open_pdf)
+        row.addStretch()
+        layout.addLayout(row)
+        row = QHBoxLayout()
+        row.addStretch()
+        row.addWidget(self.cancel_button)
+        row.addWidget(self.start_button)
         layout.addLayout(row)
         self.current_snapshot = None
+        self.format.currentIndexChanged.connect(self.update_options)
+        self.mode.currentIndexChanged.connect(self.update_options)
+        self.destination.textChanged.connect(self.update_options)
+        self.sources.model().rowsInserted.connect(self.update_options)
+        self.sources.model().rowsRemoved.connect(self.update_options)
+        self.sources.model().modelReset.connect(self.update_options)
+        self.update_options()
+
+    def update_options(self, *args):
+        target = self.format.currentData()
+        office = target in ("docx", "pptx")
+        self.mode.setEnabled(office and not self.running)
+        self.dpi.setEnabled(target != "pdf" and not self.running)
+        self.current_button.setEnabled(bool(self.parent().current.model.doc) and not self.running)
+        self.start_button.setEnabled(not self.running and self.sources.count() > 0
+                                     and bool(self.destination.text()) and Path(self.destination.text()).is_dir())
+        if target == "pdf":
+            hint = "이미지는 원래 비율로 PDF를 만듭니다. Word·PowerPoint 파일에는 Microsoft Office 또는 LibreOffice가 필요합니다."
+        elif not office:
+            hint = "PDF의 각 페이지를 별도 이미지로 저장합니다. 원본 파일은 바꾸지 않습니다."
+        elif self.mode.currentData() == "appearance":
+            hint = "각 페이지를 이미지로 넣어 모양을 유지합니다. 결과 문서의 글자는 편집할 수 없습니다."
+        elif target == "docx":
+            hint = "본문과 그림 순서로 재구성합니다. 표·단·배치는 달라질 수 있으며 스캔은 이미지로 유지합니다. OCR은 제공하지 않습니다."
+        else:
+            hint = "가로 본문은 글자 상자로, 도형은 배경으로 옮깁니다. 회전·세로쓰기·스캔 페이지는 이미지로 유지하며 OCR은 제공하지 않습니다."
+        self.format_hint.setText(hint)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.update_options()
 
     def choose_sources(self):
         paths, _ = QFileDialog.getOpenFileNames(self, "변환할 파일", "", "지원 파일 (*.pdf *.jpg *.jpeg *.png *.doc *.docx *.ppt *.pptx)")
         if paths:
             self.sources.clear()
             self.sources.addItems(paths)
+            for index, path in enumerate(paths):
+                item = self.sources.item(index)
+                item.setText(Path(path).name)
+                item.setToolTip(path)
+                item.setData(Qt.ItemDataRole.UserRole, path)
             self.format.setCurrentIndex(1 if all(Path(p).suffix.lower() == ".pdf" for p in paths) else 0)
             if not self.destination.text():
                 self.destination.setText(str(Path(paths[0]).parent))
@@ -187,6 +249,7 @@ class ConversionDialog(QDialog):
         self.open_pdf.setEnabled(any(p.lower().endswith(".pdf") for p in self.outputs))
         for widget in self.source_controls + [self.start_button]:
             widget.setEnabled(True)
+        self.update_options()
         self.process.deleteLater()
         self.process = None
         self.temporary.cleanup()

@@ -29,16 +29,16 @@ colors:
 typography:
   wordmark:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "23px"
+    fontSize: "19px"
     fontWeight: 600
   headline:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "30px"
-    fontWeight: 650
+    fontSize: "24px"
+    fontWeight: 600
   title:
     fontFamily: "Pretendard Variable, Malgun Gothic"
     fontSize: "17px"
-    fontWeight: 650
+    fontWeight: 600
   introduction:
     fontFamily: "Pretendard Variable, Malgun Gothic"
     fontSize: "14px"
@@ -54,22 +54,22 @@ typography:
 rounded:
   compact: "4px"
   item: "5px"
-  control: "7px"
-  list: "8px"
+  control: "4px"
+  list: "4px"
 spacing:
   control: "8px"
-  header-gap: "10px"
-  inspector: "18px"
+  header-gap: "8px"
+  inspector: "16px"
 components:
   wordmark:
     textColor: "{colors.accent}"
     typography: "{typography.wordmark}"
-    width: "84px"
+    width: "70px"
   button-primary:
     backgroundColor: "{colors.accent}"
     textColor: "{colors.surface}"
     rounded: "{rounded.control}"
-    padding: "9px 18px"
+    padding: "7px 16px"
   button-primary-hover:
     backgroundColor: "{colors.accent-hover}"
   button-primary-active:
@@ -81,51 +81,51 @@ components:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    padding: "7px 11px"
+    padding: "6px 10px"
   button-secondary:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    padding: "7px 11px"
+    padding: "6px 10px"
   button-danger:
     backgroundColor: "transparent"
     textColor: "{colors.danger}"
     rounded: "{rounded.control}"
-    padding: "7px 11px"
+    padding: "6px 10px"
   input:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    padding: "8px"
+    padding: "6px"
   search:
     backgroundColor: "{colors.chrome}"
     rounded: "{rounded.control}"
     padding: "7px 8px"
     width: "180px"
   tool-selected:
-    backgroundColor: "{colors.selected}"
+    backgroundColor: "{colors.chrome}"
     textColor: "{colors.accent}"
     rounded: "{rounded.control}"
     padding: "8px 4px"
-    width: "62px"
-    height: "62px"
+    width: "60px"
+    height: "56px"
   document-tab:
     backgroundColor: "transparent"
     textColor: "#606D83"
-    rounded: "7px 7px 0 0"
-    padding: "8px 14px"
+    rounded: "4px 4px 0 0"
+    padding: "6px 12px"
   document-tab-selected:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.selection-ink}"
   window-bar:
     backgroundColor: "{colors.window-bar}"
-    height: "44px"
+    height: "40px"
   window-control:
     backgroundColor: "transparent"
     rounded: "0px"
     padding: "0px"
     width: "46px"
-    height: "44px"
+    height: "40px"
 ---
 
 # Design System: Folio
@@ -143,7 +143,7 @@ components:
 - 선택·저장·적용을 구분하는 파란 상태색.
 - 즉시 반응하는 Windows 네이티브 위젯.
 
-표시 제품명은 Folio이며 창 제목·트레이에도 같은 이름을 쓴다. 기존 데이터·IPC·설치 식별자인 Paperlight와 Python 패키지 경로는 유지한다. PDF 안의 기존 콘텐츠는 브랜드 변경 대상이 아니다.
+표시 제품명은 Folio이며 창 제목·트레이·실행 파일·설치·시작 메뉴·기본 앱에도 같은 이름을 쓴다. 기존 데이터·IPC·설치 식별자인 Paperlight와 Python 패키지 경로는 유지한다. PDF 안의 기존 콘텐츠는 브랜드 변경 대상이 아니다.
 
 기준 구현은 `paperlight/theme.py`, `style.py`, `icons.py`, `chrome.py`, `workspace.py`, `window.py`와 앱 시작점 `__main__.py`다. 이 문서는 구현된 재사용 규칙을 기록한다. 화면별 구성은 `.impeccable/surfaces/workspace.md`에 둔다. 확인한 소스의 SHA-256은 `.impeccable/design.json`의 `extensions.native.sourceHashes`에 기록한다.
 
@@ -165,11 +165,11 @@ Windows에서 Qt 플랫폼이 미지정 또는 `windows`일 때 QApplication 생
 
 ## Layout
 
-Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 1400×960, 최소 창은 1050×760이다. 최상단은 Windows 제목줄과 문서 탭을 합친 `window-bar`다. 왼쪽 8px 여백부터 고정 너비의 Folio 워드마크, 문서 탭, 바로 옆 34×32px 파일 추가 버튼, 빈 이동 영역, 오른쪽 최소화·최대화·닫기 순으로 놓인다. 워드마크는 라벨 안에서 가로·세로 가운데 정렬한다. 파일 추가 뒤에는 최소 80px의 빈 영역을 남긴다. 별도 제품명 배너나 OS 제목줄을 중복 표시하지 않는다.
+Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 작업 표시줄을 제외한 화면 안에서 최대 1400×960, 최소 창은 960×640이다. 최상단은 Windows 제목줄과 문서 탭을 합친 `window-bar`다. 왼쪽 8px 여백부터 고정 너비의 Folio 워드마크, 문서 탭, 바로 옆 34×32px 파일 추가 버튼, 빈 이동 영역, 오른쪽 최소화·최대화·닫기 순으로 놓인다. 워드마크는 라벨 안에서 가로·세로 가운데 정렬한다. 파일 추가 뒤에는 최소 80px의 빈 영역을 남긴다. 별도 제품명 배너나 OS 제목줄을 중복 표시하지 않는다.
 
-그 아래 파일·열기·변환·저장 헤더, 문서 도구줄과 작업 공간이 놓인다. 헤더의 내부 여백은 왼쪽 20·위아래 10·오른쪽 18px이며 요소 간격은 `header-gap`이다.
+그 아래 파일·열기·변환·저장 헤더, 문서 도구줄과 작업 공간이 놓인다. 헤더의 내부 여백은 왼쪽 16·위아래 6·오른쪽 12px이며 요소 간격은 `header-gap`이다.
 
-왼쪽 도구막대는 76px, 도구는 62×62px이다. 페이지 목록은 155~210px, 오른쪽 속성 패널은 270~330px이며 중앙 문서가 남는 너비를 사용한다. 초기 분할 크기는 180·850·300px이며 실제 창 크기에 맞춰 Qt가 배분한다. 페이지 목록을 접고 읽기 모드에서 속성 패널을 숨겨 문서 영역을 확보한다. 속성 패널 여백은 18·18·18·14px, 세로 간격은 9px이다.
+왼쪽 도구막대는 68px, 도구는 60×56px이다. 페이지 목록은 155~210px, 오른쪽 속성 패널은 270~330px이며 중앙 문서가 남는 너비를 사용한다. 초기 분할 크기는 180·850·300px이며 실제 창 크기에 맞춰 Qt가 배분한다. 페이지 목록을 접고 읽기 모드에서 속성 패널을 숨겨 문서 영역을 확보한다. 속성 패널 여백은 16·16·16·12px, 세로 간격은 8px이다.
 
 웹·모바일 중단점은 없다. 이 치수는 Qt 논리 픽셀 기준이며 Windows 배율과 글꼴 계측의 영향을 받는다. 탭의 긴 이름은 가운데를 생략하고 툴팁으로 전체 경로를 제공한다. 탭이 많으면 Qt 스크롤 버튼을 사용한다.
 
@@ -190,7 +190,7 @@ Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 1400×96
 - **일반·보조·삭제 버튼:** 일반은 투명, 보조는 흰 바탕과 경계선, 삭제는 붉은 글자다. 일반 hover·pressed는 중립색, 삭제 hover는 연한 붉은 배경이다. 비활성 상태는 흐린 글자로 구분한다.
 - **입력:** 흰 바탕과 경계선, hover 시 경계 강화, focus 시 파란 테두리다. 검색 입력은 평상시 `chrome`, focus 시 흰 바탕이다. 스핀 입력은 오른쪽 상하 버튼을 유지한다.
 - **도구 탐색:** 아이콘 아래 한국어 이름을 보인다. 선택 상태는 연한 파란 바탕·파란 글자·굵기 600으로 구분한다. 아이콘 전용 동작에는 툴팁과 접근성 이름을 둔다.
-- **문서 탭:** `window-bar` 위에 비선택 탭을 투명하게 놓고 선택 탭은 흰 바탕으로 연결한다. 위쪽 여백 5px·오른쪽 여백 3px, 최소 너비 130px·최대 220px이다. 비선택 hover에는 `document-tab-hover`를 쓴다. 닫기는 별도 선 아이콘 버튼이다. 저장하지 않은 변경은 탭의 `*`와 헤더 상태 문구로 표시한다.
+- **문서 탭:** `window-bar` 위에 비선택 탭을 투명하게 놓고 선택 탭은 흰 바탕으로 연결한다. 위쪽 여백 5px·오른쪽 여백 3px, 최소 너비 110px·최대 210px이다. 비선택 hover에는 `document-tab-hover`를 쓴다. 닫기는 별도 선 아이콘 버튼이다. 저장하지 않은 변경은 탭의 `*`와 헤더 상태 문구로 표시한다.
 - **통합 창 조작부:** `FramelessWindowHint`로 기존 OS 제목줄을 대신한다. 빈 상단 영역의 드래그는 `startSystemMove`, 더블클릭은 최대화·복원에 연결한다. 창 조작 아이콘은 16px이며 최대화 상태에서는 복원 아이콘·접근성 이름으로 바뀐다. 닫기 hover는 `window-close-hover`다. 가장자리 크기 조절은 Win32 `WM_NCHITTEST`와 물리 화면 좌표를 사용하고, 감지 폭은 `round(6 × devicePixelRatioF())`이다. 최대화·전체 화면에서는 이 감지를 하지 않는다. 닫기는 기존 창 종료 처리로 연결해 트레이 설정과 미저장 입력 보호를 유지한다.
 - **목록·메뉴:** 선택 배경은 연한 파란색이다. 페이지 썸네일의 선택에는 별도 테두리를 더한다. 메뉴의 비활성 항목은 흐린 글자다.
 - **문서 작업:** 적용과 파일 저장은 서로 다른 동작으로 설명한다. 미적용 입력 확인·저장 대화상자·복구 안내는 네이티브 동작을 유지한다. 별도 카드·칩 디자인은 만들지 않는다.
@@ -211,3 +211,9 @@ Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 1400×96
 - **Don't** UI 글꼴 설정으로 PDF 원본의 글꼴이나 문서 색상을 바꾸지 않는다.
 - **Don't** 생성된 래스터 그림이나 장식 애니메이션을 작업 공간에 추가하지 않는다.
 - **Don't** 미니멀하게 보이도록 기존 기능·라벨·단축키·상태 표시를 제거하지 않는다.
+
+## 0.10 전체 UI 정리
+
+변환·서명·복구 창은 24px 바깥 여백, 12px 그룹 간격, 17px/600 제목을 공유한다. 변환은 라벨이 붙은 옵션과 결과 형식에 맞는 설명을 보여주며, 관련 없는 옵션은 비활성화한다. 서명 적용은 실제 획이 있을 때만 활성화한다. 빈 문서의 탐색·확대·저장도 비활성 상태로 표현한다.
+
+오른쪽 패널은 세로 스크롤을 허용하고 가로 스크롤은 생기지 않도록 숫자 입력 너비를 배분한다. 960×640에서도 적용 버튼을 스크롤로 찾을 수 있다. 선택 도구는 중립 바탕과 파란 글자·아이콘, 선택 페이지는 흰 바탕과 파란 테두리로 구분한다. 기능을 뜻하는 선 아이콘과 실제 문서 그림자는 유지하며 장식용 아이콘·배지·색상은 추가하지 않는다.

@@ -35,7 +35,7 @@ class InstanceServer(QObject):
                     break
                 QThread.msleep(100)
             if not connected:
-                raise RuntimeError("실행 중인 Paperlight에 연결하지 못했습니다. 잠시 후 다시 열어 주세요.")
+                raise RuntimeError("실행 중인 Folio에 연결하지 못했습니다. 잠시 후 다시 열어 주세요.")
             socket.write(json.dumps([str(Path(p).resolve()) for p in paths]).encode() + b"\n")
             if socket.bytesToWrite() and not socket.waitForBytesWritten(3000):
                 raise RuntimeError("열기 요청을 전달하지 못했습니다.")

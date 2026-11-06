@@ -8,6 +8,9 @@ from .window import MainWindow
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--verify-recovery-from":
+        from .verify_recovery import verify
+        sys.exit(verify(Path(sys.argv[3]), worker_executable=Path(sys.argv[2])))
     if len(sys.argv) == 4 and sys.argv[1] == "--verify-ipc-client":
         from PySide6.QtCore import QCoreApplication
         from .instance import InstanceServer
