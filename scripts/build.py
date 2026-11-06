@@ -45,6 +45,10 @@ shutil.copytree(ROOT / "docs", target / "docs", dirs_exist_ok=True)
 shutil.copy2(ROOT / "THIRD_PARTY_NOTICES.md", target / "THIRD_PARTY_NOTICES.md")
 licenses = target / "licenses"
 licenses.mkdir(exist_ok=True)
+velopack_licenses = licenses / "velopack"
+velopack_licenses.mkdir(exist_ok=True)
+# PyPI wheel에는 라이선스 파일이 없어 고정 태그의 원문을 별도로 포함한다.
+shutil.copy2(ROOT / "packaging/licenses/Velopack-LICENSE.txt", velopack_licenses / "LICENSE.txt")
 for package in ("PyMuPDF", "PySide6-Essentials", "shiboken6", "PyInstaller", "python-docx", "python-pptx", "Pillow", "lxml", "pywin32", "typing_extensions", "XlsxWriter", "fonttools", "velopack"):
     dist = importlib.metadata.distribution(package)
     for item in dist.files or []:
