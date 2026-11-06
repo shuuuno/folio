@@ -1,0 +1,238 @@
+{
+  "passed": true,
+  "method": "Qt 네이티브 검토 보조. 웹 DOM 검사가 아님",
+  "contrast_pairs": [
+    {
+      "foreground": "ink",
+      "background": "surface",
+      "ratio": 14.426,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "surface",
+      "ratio": 7.326,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "chrome",
+      "ratio": 6.758,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "canvas",
+      "ratio": 4.991,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "rail",
+      "ratio": 6.119,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent",
+      "ratio": 6.652,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent_hover",
+      "ratio": 8.265,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent_pressed",
+      "ratio": 9.903,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "accent",
+      "background": "selected",
+      "ratio": 5.686,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "danger",
+      "background": "surface",
+      "ratio": 6.717,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "selection_ink",
+      "background": "selection_text",
+      "ratio": 10.314,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "focus",
+      "background": "surface",
+      "ratio": 6.652,
+      "minimum": 3
+    },
+    {
+      "foreground": "focus",
+      "background": "chrome",
+      "ratio": 6.137,
+      "minimum": 3
+    },
+    {
+      "foreground": "control_border",
+      "background": "surface",
+      "ratio": 3.463,
+      "minimum": 3
+    },
+    {
+      "foreground": "control_border",
+      "background": "chrome",
+      "ratio": 3.194,
+      "minimum": 3
+    },
+    {
+      "foreground": "muted",
+      "background": "selected",
+      "ratio": 6.262,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "ink",
+      "background": "rail",
+      "ratio": 12.05,
+      "minimum": 4.5
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "bolder2/01-empty-after.png",
+      "sha256": "4133dca8d8816e9b51f6cae1d9d258214b6787c37fdc1262b4e128972602549a",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "01-empty-after.png",
+      "sha256": "261eee9ded3717055ba5bf7eee18378992a5c190fb529e3c7e42b2cbb9a8fdf2",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "bolder2/02-reading-after.png",
+      "sha256": "9baa5c8e50b08a89aee9ad8737dd0054ea3d083970fb9a6d44f4809c2d77beaf",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "02-reading-after.png",
+      "sha256": "d4e9d0143931ae50cc71d962f66e2ef447c7e525f2c2cde6056fd7cf362ba742",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "bolder2/03-edit-after.png",
+      "sha256": "eb81a4e4f3b6ab4c91d66e1b3a78796237d6e1706a32b7a66545265f88446fa5",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "03-edit-after.png",
+      "sha256": "fd27e6850aedf230c8ec84bc60a97ca7e1e32377e4c20f2f3be6d593e1edf324",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "bolder2/04-text-after.png",
+      "sha256": "80a31d910ed3b4158491192ad37b637bd611d54d0a0783bbf7e13fd09f12b0aa",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "04-text-after.png",
+      "sha256": "6ad560c80dcbbff2e1f9cca8119991b0de2668649a6ee14b44e670a365b11719",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "bolder2/05-compact-after.png",
+      "sha256": "5003d061ce3abaac586ad1ff9d64f281b2d3bbc9f5723434e1b137b14354c22e",
+      "pixels": [
+        1680,
+        1120
+      ]
+    },
+    {
+      "file": "05-compact-after.png",
+      "sha256": "8378d117b9f8a39404c09a760051ef790542ffd5b401acf24a031f107f41d2d6",
+      "pixels": [
+        1680,
+        1120
+      ]
+    },
+    {
+      "file": "bolder2/06-conversion-after.png",
+      "sha256": "4c0be04c91576ecae573b9fc13f4091858c610e79392ae9835c49ae858c6dd9b",
+      "pixels": [
+        1260,
+        1155
+      ]
+    },
+    {
+      "file": "06-conversion-after.png",
+      "sha256": "beffed932f314711f8058d6eb7287cff543d793cb8076966615bc5fcf95264ac",
+      "pixels": [
+        1260,
+        1155
+      ]
+    },
+    {
+      "file": "bolder2/07-signature-after.png",
+      "sha256": "bde640966fcde55e74eb8d24ef2b3bb080ce007af3f12b293684858c40b53c7e",
+      "pixels": [
+        1085,
+        788
+      ]
+    },
+    {
+      "file": "07-signature-after.png",
+      "sha256": "eef1eb5f53db78b6ead01be69241e9880aaa7bde21c8f8b983743622f63bb448",
+      "pixels": [
+        1085,
+        784
+      ]
+    },
+    {
+      "file": "bolder2/08-placement-after.png",
+      "sha256": "0481ec4f425d4b74b7c8142cfb5943467caf79a4863fd161c3c78c2a57f52340",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "08-placement-after.png",
+      "sha256": "3c8f52b5f8d35c7d3d9b7c853076e94f5bc89c85cada64e2b9291b5c2aee9442",
+      "pixels": [
+        2450,
+        1680
+      ]
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "branch": "design-polish",
+  "tests": {
+    "passed": true,
+    "count": 99,
+    "seconds": 83.197,
+    "font_tests": 9,
+    "log": "evidence/font-picker/unittest-final.txt"
+  },
+  "source_fonts": {
+    "evidence": "evidence/font-picker/native/font-check.json",
+    "passed": true,
+    "native": true,
+    "frozen": false,
+    "installed_faces": 529,
+    "default_malgun": true,
+    "chosen_font_embedded": true,
+    "korean_roundtrip": true,
+    "reopened_object_preserves_font": true,
+    "last_choice_remembered": true,
+    "laptop_picker_accessible": true,
+    "dpr": 1.75,
+    "selected_label": "맑은 고딕 (Bold)"
+  },
+  "source_workspace": {
+    "evidence": "evidence/font-picker/workspace-native/workspace-check.json",
+    "passed": true,
+    "version": "0.10.0",
+    "frozen": false,
+    "native": true,
+    "device_pixel_ratio": 1.75,
+    "conversion_worker_completed": true,
+    "second_process_waited_for_startup_and_forwarded": true,
+    "laptop_960x640_apply_and_fit": true,
+    "compact_edit_layout_and_fit": true,
+    "tabs_independent_and_deduplicated": true,
+    "native_window_visible": true,
+    "tray_available": true,
+    "integrated_chrome_resize_maximize_minimize_restore": true,
+    "real_tray_hide_restore": true
+  },
+  "frozen_fonts": {
+    "evidence": "evidence/font-picker/frozen-fonts-final/font-check.json",
+    "passed": true,
+    "native": true,
+    "frozen": true,
+    "installed_faces": 529,
+    "default_malgun": true,
+    "chosen_font_embedded": true,
+    "korean_roundtrip": true,
+    "reopened_object_preserves_font": true,
+    "last_choice_remembered": true,
+    "laptop_picker_accessible": true,
+    "dpr": 1.75,
+    "selected_label": "맑은 고딕 (Bold)"
+  },
+  "frozen_workspace": {
+    "evidence": "evidence/font-picker/frozen-workspace/workspace-check.json",
+    "passed": true,
+    "version": "0.10.0",
+    "frozen": true,
+    "native": true,
+    "device_pixel_ratio": 1.75,
+    "conversion_worker_completed": true,
+    "second_process_waited_for_startup_and_forwarded": true,
+    "laptop_960x640_apply_and_fit": true,
+    "compact_edit_layout_and_fit": true,
+    "tabs_independent_and_deduplicated": true,
+    "native_window_visible": true,
+    "tray_available": true,
+    "integrated_chrome_resize_maximize_minimize_restore": true,
+    "real_tray_hide_restore": true
+  },
+  "layouts": [
+    {
+      "dpr": 0.9999999992499999,
+      "states": 8,
+      "no_horizontal_overflow": true,
+      "evidence": "evidence/design-polish/font-picker/after-0.571428571/captures.json"
+    },
+    {
+      "dpr": 1.2499999995,
+      "states": 8,
+      "no_horizontal_overflow": true,
+      "evidence": "evidence/design-polish/font-picker/after-0.714285714/captures.json"
+    },
+    {
+      "dpr": 1.75,
+      "states": 8,
+      "no_horizontal_overflow": true,
+      "evidence": "evidence/design-polish/font-picker/after-1/captures.json"
+    }
+  ],
+  "contrast": {
+    "passed": true,
+    "pairs": 17,
+    "log": "evidence/font-picker/design-check.txt"
+  },
+  "prior_pngs_unchanged_from": "25ac20b",
+  "screenshot": {
+    "path": "docs/design-polish/font-picker.png",
+    "sha256": "f64210bbce10bf3e7bc9be8447320f48077db3b11e0800cbc810bdd148fccaa9",
+    "native": true,
+    "dpr": 1.75
+  },
+  "build": {
+    "passed": true,
+    "output": "build/font-picker-distribution/Folio/Folio.exe",
+    "log": "evidence/font-picker/build-final.txt",
+    "fonttools": "4.68.0"
+  },
+  "hallmark": {
+    "status": "unsupported_qt",
+    "exit_code": 2,
+    "counted_as_automatic_pass": false,
+    "log": "evidence/font-picker/hallmark-cli.txt"
+  },
+  "not_performed": [
+    "manual Windows IME",
+    "full screen reader traversal",
+    "installer and uninstaller QA"
+  ],
+  "merged": false,
+  "pushed": false,
+  "deployed": false
+}

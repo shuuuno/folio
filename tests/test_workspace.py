@@ -133,6 +133,56 @@ class WorkspaceTests(unittest.TestCase):
             self.assertTrue(self.window.isVisible())
             self.assertEqual(self.window.tabs.count(), 2)
 
+    def test_laptop_inspector_actions_stay_visible_while_fields_scroll(self):
+        self.window.open_files([self.a])
+        self.window.resize(960, 640)
+        editor = self.window.current
+        editor.set_mode("edit")
+        editor.select_text(next(s for s in editor.model.page_spans(0) if s.text == "담당자: 김하늘"))
+        editor.editor.setPlainText("담당자: 이서준")
+        QTest.qWait(200)
+        self.assertEqual(self.window.size().width(), 960)
+        self.assertEqual(self.window.size().height(), 640)
+        self.assertGreater(editor.inspector_scroll.verticalScrollBar().maximum(), 0)
+        self.assertEqual(editor.inspector_scroll.horizontalScrollBar().maximum(), 0)
+        original = editor.apply_button.mapTo(editor.inspector, QPoint(0, 0))
+        for value in (editor.inspector_scroll.verticalScrollBar().maximum(), 0):
+            editor.inspector_scroll.verticalScrollBar().setValue(value)
+            APP.processEvents()
+            self.assertEqual(editor.apply_button.mapTo(editor.inspector, QPoint(0, 0)), original)
+            for button in (editor.apply_button, editor.cancel_button):
+                self.assertTrue(editor.inspector.rect().contains(button.mapTo(editor.inspector, button.rect().topLeft())))
+                self.assertTrue(editor.inspector.rect().contains(button.mapTo(editor.inspector, button.rect().bottomRight())))
+        self.assertEqual(editor.editor.toPlainText(), "담당자: 이서준")
+        editor.apply_button.click()
+        self.assertIn("담당자: 이서준", editor.model.doc[0].get_text())
+
+    def test_ribbon_fits_laptop_and_search_shortcuts_still_work(self):
+        self.window.open_files([self.a])
+        self.window.resize(960, 640)
+        editor = self.window.current
+        APP.processEvents()
+        positions = []
+        for control in list(editor.mode_buttons.values()) + [editor.undo_button, editor.redo_button,
+                                                              editor.search_box, editor.sidebar_button]:
+            self.assertTrue(editor.ribbon.rect().contains(control.mapTo(editor.ribbon, control.rect().topLeft())))
+            self.assertTrue(editor.ribbon.rect().contains(control.mapTo(editor.ribbon, control.rect().bottomRight())))
+        for button in editor.mode_buttons.values():
+            positions.append(button.mapTo(editor.ribbon, QPoint(0, 0)))
+        self.assertEqual(len({point.y() for point in positions}), 1)
+        self.assertEqual(sorted(point.x() for point in positions), [point.x() for point in positions])
+        editor.view.setFocus()
+        QTest.keyClick(editor.view, Qt.Key.Key_F, Qt.KeyboardModifier.ControlModifier)
+        self.assertTrue(editor.search_box.hasFocus())
+        editor.search_box.setText("담당자")
+        QTest.keyClick(editor.search_box, Qt.Key.Key_Return)
+        self.assertTrue(editor._search_hits)
+        QTest.keyClick(editor.search_box, Qt.Key.Key_F3)
+        self.assertIsNotNone(editor.search_hit)
+        editor.mode_buttons["edit"].click()
+        self.assertEqual(editor.mode, "edit")
+        self.assertTrue(editor.inspector.isVisible())
+
     def test_overflow_tabs_leave_window_controls_accessible(self):
         self.window.resize(1050, 760)
         for index in range(14):

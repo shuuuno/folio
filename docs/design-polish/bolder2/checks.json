@@ -1,0 +1,88 @@
+{
+  "baseline_commit": "3d16bc2",
+  "method": "현재 세션의 단독 네이티브 검토",
+  "unittest": {
+    "passed": true,
+    "tests": 87,
+    "seconds": 74.319,
+    "log": "evidence/design-polish/bolder2/unittest.txt"
+  },
+  "native_workspace": {
+    "passed": true,
+    "version": "0.10.0",
+    "frozen": false,
+    "native": true,
+    "device_pixel_ratio": 1.75,
+    "conversion_worker_completed": true,
+    "second_process_waited_for_startup_and_forwarded": true,
+    "laptop_960x640_apply_and_fit": true,
+    "compact_edit_layout_and_fit": true,
+    "tabs_independent_and_deduplicated": true,
+    "native_window_visible": true,
+    "tray_available": true,
+    "integrated_chrome_resize_maximize_minimize_restore": true,
+    "real_tray_hide_restore": true
+  },
+  "captures": [
+    {
+      "scale_factor": "1",
+      "device_pixel_ratio": 1.75,
+      "states": 8,
+      "minimum_window": [
+        960,
+        640
+      ]
+    },
+    {
+      "scale_factor": "0.571428571",
+      "device_pixel_ratio": 0.9999999992499999,
+      "states": 8,
+      "minimum_window": [
+        960,
+        640
+      ]
+    },
+    {
+      "scale_factor": "0.714285714",
+      "device_pixel_ratio": 1.2499999995,
+      "states": 8,
+      "minimum_window": [
+        960,
+        640
+      ]
+    }
+  ],
+  "contrast_pairs": 17,
+  "image_integrity": {
+    "passed": true,
+    "new_images": 8,
+    "baseline_images": 8,
+    "details": "verification.json",
+    "original_before_after_unchanged": true
+  },
+  "hallmark_web_cli": {
+    "supported": false,
+    "exit_code": 2,
+    "message": "sloplint: no .html, .css, .jsx, .tsx, .vue, .svelte or .astro files found",
+    "native_review": "실제 화면·배치·대비·기능 보존을 검토함. 웹 검사 통과가 아님"
+  },
+  "sources": [
+    {
+      "path": "paperlight/window.py",
+      "sha256": "406dbc506c262384c94c2fdad205edc7e9a97a99a04c01c894d35b411f6055da"
+    },
+    {
+      "path": "paperlight/style.py",
+      "sha256": "ce466bed6f685130fdb3efc4fc90c2f58ab3bf18a5c99a42fc06eba57f00526f"
+    },
+    {
+      "path": "paperlight/theme.py",
+      "sha256": "aad4c23fce2f7a35cefa0f41ca68fc9d9639fda29dbc4807977d93665b777f61"
+    }
+  ],
+  "not_tested": [
+    "실제 수동 Windows IME",
+    "스크린리더 전체 경로",
+    "설치판 재빌드·설치"
+  ]
+}

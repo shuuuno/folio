@@ -108,15 +108,13 @@ def verify(output, native=False):
         settle()
         assert window.width() == 960 and window.height() == 640, "노트북 창 최소 크기 초과"
         assert first_tab.view.horizontalScrollBar().maximum() == 0
-        first_tab.inspector.ensureWidgetVisible(first_tab.apply_button)
-        settle()
-        assert first_tab.inspector.horizontalScrollBar().maximum() == 0, "속성 패널 가로 잘림"
-        center = first_tab.apply_button.mapTo(first_tab.inspector.viewport(), first_tab.apply_button.rect().center())
-        assert first_tab.inspector.viewport().rect().contains(center), "노트북 창 적용 버튼 접근 불가"
+        assert first_tab.inspector_scroll.horizontalScrollBar().maximum() == 0, "속성 패널 가로 잘림"
+        center = first_tab.apply_button.mapTo(first_tab.inspector, first_tab.apply_button.rect().center())
+        assert first_tab.inspector.rect().contains(center), "노트북 창 적용 버튼 접근 불가"
         window.grab().save(str(output / "laptop.png"))
         result["laptop_960x640_apply_and_fit"] = True
         window.resize(1050, 760)
-        first_tab.inspector.verticalScrollBar().setValue(0)
+        first_tab.inspector_scroll.verticalScrollBar().setValue(0)
         from unittest.mock import patch
         with patch.object(first_tab, "choose_signature"):
             first_tab.set_mode("sign")

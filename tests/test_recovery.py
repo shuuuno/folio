@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog
 from PySide6.QtGui import QCloseEvent
 from paperlight.window import MainWindow
 from paperlight.recovery import RecoveryStore, RecoveryDialog
+from paperlight.fonts import default_font_id
 from fixtures import make_pdf
 
 APP = QApplication.instance() or QApplication([])
@@ -81,6 +82,19 @@ class RecoveryTests(unittest.TestCase):
             self.assertIn("담당자: 이서준", doc[0].get_text())
         self.assertFalse(restored._recovery_store.path.exists())
         self.assertFalse(self.source.exists())
+
+    def test_font_choice_in_pending_draft_is_recovered(self):
+        first = self.window()
+        self.pending_text(first)
+        key = default_font_id(True)
+        first.font_combo.setCurrentIndex(first.font_combo.findData(key))
+        session = self.abandon(first)
+        restored = self.window(opened=False)
+        self.assertTrue(restored.restore_recovery(session))
+        self.assertEqual(restored.selected_font_id, key)
+        self.assertTrue(restored.has_draft)
+        self.assertTrue(restored.apply_edit())
+        self.assertTrue(any("Bold" in f[3] for f in restored.model.doc[0].get_fonts()))
 
     def test_object_draft_and_signature_draft_restore(self):
         for mode in ("object", "sign", "text"):

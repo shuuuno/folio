@@ -8,24 +8,27 @@ import json
 from dataclasses import asdict
 
 import pymupdf as fitz
-from PySide6.QtCore import Qt, QRectF, QSize, Signal, QTimer, QStandardPaths
+from PySide6.QtCore import Qt, QRectF, QSize, Signal, QTimer, QStandardPaths, QSettings
 from PySide6.QtGui import (QPixmap, QImage, QColor, QPen, QBrush, QPainter, QKeySequence,
                           QAction, QIcon, QFontDatabase)
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem,
     QStackedWidget, QListWidget, QListWidgetItem, QAbstractItemView, QSplitter,
-    QDoubleSpinBox, QSpinBox, QTextEdit, QLineEdit, QFileDialog,
+    QDoubleSpinBox, QSpinBox, QTextEdit, QLineEdit, QFileDialog, QComboBox,
     QMessageBox, QInputDialog, QColorDialog, QButtonGroup, QDialog, QApplication, QMenu,
-    QToolButton, QGraphicsDropShadowEffect, QGridLayout, QScrollArea, QSizePolicy)
+    QToolButton, QGraphicsDropShadowEffect, QGridLayout, QScrollArea, QSizePolicy, QFrame)
 
 from .document import PdfDocument, EditError, rgb
 from .signature import SignatureDialog
 from .style import STYLE
 from .icons import icon
-from .theme import install_theme
+from .theme import install_theme, COLORS
 from . import DISPLAY_NAME
 from .selection import TextSelection
 from .recovery import RecoveryStore, RecoveryDialog
+from .fonts import installed_fonts, default_font_id, font_bytes
+
+PAGE_MARGIN = 36
 
 
 def pixmap_from_fitz(pix):
@@ -96,12 +99,14 @@ class PageView(QGraphicsView):
         item.setScale(1 / render_scale)
         item.setZValue(0)
         shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(18)
-        shadow.setOffset(0, 4)
-        shadow.setColor(QColor(32, 42, 59, 28))
+        shadow.setBlurRadius(22)
+        shadow.setOffset(0, 6)
+        shadow_ink = QColor(COLORS["ink"])
+        shadow_ink.setAlpha(42)
+        shadow.setColor(shadow_ink)
         item.setGraphicsEffect(shadow)
         w, h = page.rect.width, page.rect.height
-        self.setSceneRect(-26, -26, w + 52, h + 52)
+        self.setSceneRect(-PAGE_MARGIN, -PAGE_MARGIN, w + PAGE_MARGIN * 2, h + PAGE_MARGIN * 2)
         self.resetTransform()
         self.scale(self.owner.zoom, self.owner.zoom)
         if self.mode == "edit":
@@ -119,7 +124,7 @@ class PageView(QGraphicsView):
                 mark = self.scene().addRect(QRectF(box.x0, box.y0, box.width, box.height), pen)
                 mark.setZValue(2)
         if not keep_position:
-            self.centerOn(w / 2, min(h / 2, self.viewport().height() / self.owner.zoom / 2 - 26))
+            self.centerOn(w / 2, min(h / 2, self.viewport().height() / self.owner.zoom / 2 - PAGE_MARGIN))
         self.paint_read_selection()
         hit = getattr(self.owner, "search_hit", None)
         if hit is not None and hit[0] == self.owner.page_number:
@@ -444,122 +449,169 @@ class MainWindow(QMainWindow):
         self.save_button = self.button("다른 이름으로 저장", self.save_as, True)
         row.addWidget(self.save_button)
         layout.addWidget(header)
-        body_row = QHBoxLayout()
-        body_row.setContentsMargins(0, 0, 0, 0)
-        body_row.setSpacing(0)
-        layout.addLayout(body_row, 1)
-        rail = QWidget()
-        rail.setObjectName("toolRail")
-        rail.setFixedWidth(68)
-        rail_layout = QVBoxLayout(rail)
-        rail_layout.setContentsMargins(4, 8, 4, 8)
-        rail_layout.setSpacing(4)
-        body_row.addWidget(rail)
-        content = QVBoxLayout()
-        content.setContentsMargins(0, 0, 0, 0)
-        content.setSpacing(0)
-        body_row.addLayout(content, 1)
-        tools = QWidget()
+        tools = self.ribbon = QWidget()
         tools.setObjectName("tools")
         row = QHBoxLayout(tools)
-        row.setContentsMargins(12, 4, 12, 4)
-        row.setSpacing(5)
+        row.setContentsMargins(16, 10, 16, 10)
+        row.setSpacing(12)
+        mode_group = QWidget()
+        mode_layout = QHBoxLayout(mode_group)
+        mode_layout.setContentsMargins(0, 0, 0, 0)
+        mode_layout.setSpacing(4)
         self.modes = QButtonGroup(self)
         self.mode_buttons = {}
         for key, text, symbol in [("view", "보기", "cursor"), ("edit", "본문 수정", "edit"), ("text", "텍스트", "text"), ("sign", "서명", "sign"), ("object", "배치 편집", "layers")]:
             b = QToolButton()
             b.setText(text)
             b.setObjectName("railButton")
-            b.setIcon(icon(symbol))
-            b.setIconSize(QSize(20, 20))
+            b.setIcon(icon(symbol, checked_color=COLORS["surface"]))
+            b.setIconSize(QSize(26, 26))
             b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-            b.setFixedSize(60, 56)
+            b.setFixedSize(72, 68)
             b.setToolTip("텍스트 추가" if key == "text" else text)
+            b.setAccessibleName("텍스트 추가" if key == "text" else text)
             b.clicked.connect(lambda checked=False, k=key: self.set_mode(k))
             b.setCheckable(True)
             self.modes.addButton(b)
             self.mode_buttons[key] = b
-            rail_layout.addWidget(b)
-        rail_layout.addStretch()
+            mode_layout.addWidget(b)
+        row.addWidget(mode_group)
+        separator = QFrame()
+        separator.setObjectName("ribbonSeparator")
+        separator.setFixedSize(1, 56)
+        row.addWidget(separator)
+        history_group = QWidget()
+        history_group.setObjectName("ribbonHistory")
+        history = QVBoxLayout(history_group)
+        history.setContentsMargins(0, 0, 0, 0)
+        history.setSpacing(4)
         self.mode_buttons["view"].setChecked(True)
         self.document_controls = []
         self.sidebar_button = self.icon_button("sidebar", "페이지 목록 표시 / 숨기기", self.toggle_sidebar)
-        row.addWidget(self.sidebar_button)
         self.document_controls.append(self.sidebar_button)
-        row.addSpacing(12)
         self.undo_button = self.icon_button("undo", "실행 취소 · Ctrl+Z", self.undo)
-        row.addWidget(self.undo_button)
         self.redo_button = self.icon_button("redo", "다시 실행 · Ctrl+Shift+Z", self.redo)
-        row.addWidget(self.redo_button)
-        row.addSpacing(14)
+        for button, label in ((self.undo_button, "실행 취소"), (self.redo_button, "다시 실행")):
+            button.setText(label)
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            button.setFixedSize(100, 32)
+            history.addWidget(button)
+        row.addWidget(history_group)
+        separator = QFrame()
+        separator.setObjectName("ribbonSeparator")
+        separator.setFixedSize(1, 56)
+        row.addWidget(separator)
+        search_group = QWidget()
+        search_group.setObjectName("ribbonSearch")
+        search_group.setFixedWidth(176)
+        search = QVBoxLayout(search_group)
+        search.setContentsMargins(0, 0, 0, 0)
+        search.setSpacing(4)
         self.search_box = QLineEdit()
         self.search_box.setObjectName("search")
         self.search_box.setPlaceholderText("문서에서 찾기")
         self.search_box.setAccessibleName("문서에서 찾기")
         self.search_box.addAction(icon("search"), QLineEdit.ActionPosition.LeadingPosition)
-        self.search_box.setFixedWidth(180)
+        self.search_box.setFixedWidth(176)
         self.search_box.returnPressed.connect(self.search)
-        row.addWidget(self.search_box)
+        search.addWidget(self.search_box)
+        search_actions = QHBoxLayout()
+        search_actions.setSpacing(4)
         self.search_count = QLabel("")
         self.search_count.setObjectName("muted")
         self.search_count.setMinimumWidth(32)
-        row.addWidget(self.search_count)
+        search_actions.addWidget(self.search_count, 1)
         previous = self.icon_button("left", "이전 검색 결과 · Shift+F3", lambda: self.search(-1))
-        row.addWidget(previous)
+        search_actions.addWidget(previous)
         following = self.icon_button("right", "다음 검색 결과 · F3", lambda: self.search(1))
-        row.addWidget(following)
+        search_actions.addWidget(following)
+        search.addLayout(search_actions)
+        row.addWidget(search_group)
         self.document_controls += [self.search_box, previous, following]
         self.search_box.textChanged.connect(self.invalidate_search)
         row.addStretch()
+        separator = QFrame()
+        separator.setObjectName("ribbonSeparator")
+        separator.setFixedSize(1, 56)
+        row.addWidget(separator)
+        zoom_group = QWidget()
+        zoom_group.setObjectName("ribbonZoom")
+        zoom_group.setFixedWidth(144)
+        zoom = QVBoxLayout(zoom_group)
+        zoom.setContentsMargins(0, 0, 0, 0)
+        zoom.setSpacing(4)
+        zoom_actions = QHBoxLayout()
+        zoom_actions.setSpacing(4)
         zoom_out = self.icon_button("minus", "축소", lambda: self.change_zoom(1 / 1.2))
-        row.addWidget(zoom_out)
+        zoom_actions.addWidget(zoom_out)
         self.document_controls.append(zoom_out)
         self.zoom_label = QLabel("100%")
         self.zoom_label.setMinimumWidth(43)
         self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        row.addWidget(self.zoom_label)
+        zoom_actions.addWidget(self.zoom_label, 1)
         zoom_in = self.icon_button("plus", "확대", lambda: self.change_zoom(1.2))
-        row.addWidget(zoom_in)
+        zoom_actions.addWidget(zoom_in)
         self.document_controls.append(zoom_in)
-        row.addSpacing(8)
         fit = self.icon_button("fit", "문서 너비에 맞추기", self.fit_width)
-        row.addWidget(fit)
+        fit.setText("너비 맞춤")
+        fit.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        fit.setFixedSize(108, 32)
+        page_actions = QHBoxLayout()
+        page_actions.setSpacing(4)
+        page_actions.addWidget(self.sidebar_button)
+        page_actions.addWidget(fit)
+        zoom.addLayout(zoom_actions)
+        zoom.addLayout(page_actions)
+        row.addWidget(zoom_group)
         self.document_controls += [fit, self.zoom_label]
-        content.addWidget(tools)
+        layout.addWidget(tools)
         self.stack = QStackedWidget()
-        content.addWidget(self.stack, 1)
+        layout.addWidget(self.stack, 1)
         welcome = QWidget()
         welcome.setObjectName("welcome")
         center = QVBoxLayout(welcome)
         center.addStretch(3)
+        empty_content = QWidget()
+        empty_content.setObjectName("emptyContent")
+        empty_content.setMaximumWidth(720)
+        empty_layout = QVBoxLayout(empty_content)
+        empty_layout.setContentsMargins(48, 40, 48, 40)
+        empty_layout.setSpacing(20)
         title = QLabel("PDF 열기")
         title.setObjectName("welcomeTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        center.addWidget(title)
+        empty_layout.addWidget(title)
         body = QLabel("파일을 끌어 놓거나 선택하세요. 여러 PDF를 탭으로 열 수 있습니다.")
         body.setObjectName("welcomeBody")
-        body.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        body.setStyleSheet("padding: 12px;")
-        center.addWidget(body)
+        body.setWordWrap(True)
+        empty_layout.addWidget(body)
         actions = QHBoxLayout()
+        open_pdf = self.button("PDF 파일 열기", self.open_dialog, True)
+        open_pdf.setIcon(icon("folder", COLORS["surface"]))
+        open_pdf.setMinimumHeight(44)
+        actions.addWidget(open_pdf)
+        recover = self.button("작업 복구", self.offer_recovery)
+        recover.setObjectName("secondary")
+        recover.setMinimumHeight(44)
+        actions.addWidget(recover)
+        shortcut = QLabel("Ctrl+O")
+        shortcut.setObjectName("muted")
+        actions.addWidget(shortcut)
         actions.addStretch()
-        actions.addWidget(self.button("PDF 파일 열기", self.open_dialog, True))
-        actions.addStretch()
-        center.addLayout(actions)
-        center.addSpacing(20)
+        empty_layout.addSpacing(8)
+        empty_layout.addLayout(actions)
         privacy = QLabel("문서는 내 PC에서만 처리됩니다")
         privacy.setObjectName("muted")
-        privacy.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        center.addWidget(privacy)
+        empty_layout.addWidget(privacy)
+        center.addWidget(empty_content, 0, Qt.AlignmentFlag.AlignHCenter)
         center.addStretch(4)
         self.stack.addWidget(welcome)
         work = QSplitter(Qt.Orientation.Horizontal)
         sidebar = self.sidebar = QWidget()
         sidebar.setObjectName("sidebar")
         side_layout = QVBoxLayout(sidebar)
-        side_layout.setContentsMargins(0, 15, 0, 0)
-        self.pages_title = QLabel("   페이지")
-        self.pages_title.setObjectName("panelCaption")
+        side_layout.setContentsMargins(0, 24, 0, 0)
+        self.pages_title = QLabel("페이지")
+        self.pages_title.setObjectName("pagesTitle")
         side_layout.addWidget(self.pages_title)
         self.thumbnails = QListWidget()
         self.thumbnails.setObjectName("thumbnails")
@@ -573,8 +625,8 @@ class MainWindow(QMainWindow):
         self.thumbnails.currentRowChanged.connect(self.go_page)
         self.thumbnails.verticalScrollBar().valueChanged.connect(self.schedule_thumbnails)
         side_layout.addWidget(self.thumbnails)
-        sidebar.setMinimumWidth(155)
-        sidebar.setMaximumWidth(210)
+        sidebar.setMinimumWidth(192)
+        sidebar.setMaximumWidth(224)
         work.addWidget(sidebar)
         self.view = PageView(self)
         self.view.text_selected.connect(self.select_text)
@@ -583,7 +635,7 @@ class MainWindow(QMainWindow):
         work.addWidget(self.view)
         self.inspector = self.build_inspector()
         work.addWidget(self.inspector)
-        work.setSizes([180, 850, 300])
+        work.setSizes([208, 850, 320])
         work.setCollapsible(0, False)
         work.setCollapsible(1, False)
         work.setCollapsible(2, False)
@@ -614,8 +666,8 @@ class MainWindow(QMainWindow):
         panel = QWidget()
         panel.setObjectName("inspectorBody")
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(16, 16, 16, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(20, 24, 20, 20)
+        layout.setSpacing(12)
         self.panel_title = QLabel("본문 수정")
         self.panel_title.setObjectName("sectionTitle")
         layout.addWidget(self.panel_title)
@@ -624,15 +676,33 @@ class MainWindow(QMainWindow):
         self.panel_hint.setObjectName("muted")
         layout.addWidget(self.panel_hint)
         self.editor = QTextEdit()
+        self.editor.setObjectName("contentEditor")
+        self.editor.setAccessibleName("편집할 텍스트 내용")
         self.editor.setAcceptRichText(False)
         self.editor.setPlaceholderText("내용을 입력하세요")
-        self.editor.setMinimumHeight(80)
-        self.editor.setMaximumHeight(120)
+        self.editor.setMinimumHeight(108)
+        self.editor.setMaximumHeight(144)
         layout.addWidget(self.editor)
+        self.font_caption = QLabel("글꼴")
+        self.font_caption.setObjectName("panelCaption")
+        layout.addWidget(self.font_caption)
+        self.font_combo = QComboBox()
+        self.font_combo.setAccessibleName("PDF에 내장할 글꼴")
+        self.font_combo.setToolTip("편집용 내장이 허용된 Windows 설치 글꼴입니다. 한글 지원은 입력 내용으로 확인합니다.")
+        self.font_combo.setMaxVisibleItems(12)
+        self.font_combo.setMinimumContentsLength(12)
+        self.font_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.font_combo.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.font_combo.addItem("원본 글꼴 유지", None)
+        self.font_caption.setBuddy(self.font_combo)
+        self._font_options_loaded = False
+        self.font_combo.currentIndexChanged.connect(self.font_changed)
+        layout.addWidget(self.font_combo)
         self.font_label = QLabel("글꼴: 맑은 고딕")
         self.font_label.setWordWrap(True)
         self.font_label.setObjectName("muted")
         layout.addWidget(self.font_label)
+        layout.addSpacing(4)
         form = QHBoxLayout()
         form.setSpacing(8)
         self.size_input = QDoubleSpinBox()
@@ -642,12 +712,22 @@ class MainWindow(QMainWindow):
         self.size_input.setAccessibleName("글자 크기")
         self.size_input.setMinimumHeight(32)
         self.size_input.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        form.addWidget(QLabel("크기"))
+        size_label = QLabel("크기")
+        size_label.setBuddy(self.size_input)
+        form.addWidget(size_label)
         form.addWidget(self.size_input, 1)
         self.color_button = self.button("글자 색상", self.pick_color)
         self.color_button.setObjectName("secondary")
         form.addWidget(self.color_button)
         layout.addLayout(form)
+        rule = QFrame()
+        rule.setObjectName("sectionRule")
+        layout.addSpacing(8)
+        layout.addWidget(rule)
+        layout.addSpacing(4)
+        geometry_title = QLabel("위치와 크기")
+        geometry_title.setObjectName("groupTitle")
+        layout.addWidget(geometry_title)
         geometry = QGridLayout()
         geometry.setHorizontalSpacing(12)
         geometry.setVerticalSpacing(5)
@@ -663,37 +743,94 @@ class MainWindow(QMainWindow):
             self.geometry_inputs[key] = spin
             caption = QLabel(label)
             caption.setObjectName("panelCaption")
+            caption.setBuddy(spin)
             geometry.addWidget(caption, (index // 2) * 2, index % 2)
             geometry.addWidget(spin, (index // 2) * 2 + 1, index % 2)
         layout.addLayout(geometry)
         self.signature_button = self.button("서명 선택…", self.choose_signature)
         layout.addWidget(self.signature_button)
         layout.addStretch()
+        scroll = self.inspector_scroll = QScrollArea()
+        scroll.setObjectName("inspectorFields")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(panel)
+        inspector = QWidget()
+        inspector.setObjectName("inspector")
+        inspector.setMinimumWidth(288)
+        inspector.setMaximumWidth(340)
+        inspector_layout = QVBoxLayout(inspector)
+        inspector_layout.setContentsMargins(0, 0, 0, 0)
+        inspector_layout.setSpacing(0)
+        inspector_layout.addWidget(scroll, 1)
+        footer = QWidget()
+        footer.setObjectName("inspectorFooter")
+        footer_layout = QVBoxLayout(footer)
+        footer_layout.setContentsMargins(20, 16, 20, 16)
+        footer_layout.setSpacing(8)
         self.apply_button = self.button("문서에 적용", self.apply_edit, True)
         self.preview_note = QLabel("")
         self.preview_note.setWordWrap(True)
         self.preview_note.setObjectName("muted")
-        layout.addWidget(self.preview_note)
-        layout.addWidget(self.apply_button)
+        footer_layout.addWidget(self.preview_note)
+        footer_layout.addWidget(self.apply_button)
         self.delete_object_button = self.button("선택 항목 삭제", self.delete_selected_object)
         self.delete_object_button.setObjectName("danger")
         self.delete_object_button.hide()
-        layout.addWidget(self.delete_object_button)
+        footer_layout.addWidget(self.delete_object_button)
         self.cancel_button = self.button("선택 취소", self.clear_selection)
-        layout.addWidget(self.cancel_button)
+        footer_layout.addWidget(self.cancel_button)
         self.edit_notice = QLabel("적용 후 상단 저장 버튼으로 파일을 저장하세요.")
         self.edit_notice.setObjectName("muted")
         self.edit_notice.setWordWrap(True)
-        layout.addWidget(self.edit_notice)
-        scroll = QScrollArea()
-        scroll.setObjectName("inspector")
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setMinimumWidth(270)
-        scroll.setMaximumWidth(330)
-        scroll.setWidget(panel)
-        return scroll
+        footer_layout.addWidget(self.edit_notice)
+        inspector_layout.addWidget(footer)
+        return inspector
+
+    @property
+    def selected_font_id(self):
+        return self.font_combo.currentData() if self.font_combo.isEnabled() else None
+
+    def set_font_choice(self, key):
+        index = self.font_combo.findData(key)
+        if index < 0:
+            raise EditError("선택했던 글꼴을 사용할 수 없습니다. 글꼴을 다시 선택해 주세요.")
+        self.font_combo.blockSignals(True)
+        self.font_combo.setCurrentIndex(index)
+        self.font_combo.blockSignals(False)
+
+    def configure_font_picker(self, mode):
+        if not self._font_options_loaded:
+            self.font_combo.blockSignals(True)
+            for choice in installed_fonts():
+                self.font_combo.addItem(choice.label, choice.key)
+            self.font_combo.blockSignals(False)
+            self._font_options_loaded = True
+        self.font_combo.setItemText(0, "글꼴 선택" if mode == "text" else
+                                   "내장 글꼴 유지" if mode == "object" else "원본 글꼴 유지")
+        self.font_combo.model().item(0).setEnabled(mode != "text")
+        if mode == "text":
+            settings = QSettings(str(self.data_dir / "preferences.ini"), QSettings.Format.IniFormat)
+            key = settings.value("lastTextFont", default_font_id(), type=str)
+            if self.font_combo.findData(key) < 0:
+                key = default_font_id()
+            self.set_font_choice(key if self.font_combo.findData(key) >= 0 else None)
+        else:
+            self.set_font_choice(None)
+
+    def font_changed(self, *_):
+        key = self.selected_font_id
+        if key:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            settings = QSettings(str(self.data_dir / "preferences.ini"), QSettings.Format.IniFormat)
+            settings.setValue("lastTextFont", key)
+            self.font_label.setText("선택한 글꼴을 PDF에 내장합니다. 한글 지원은 미리보기에서 확인하세요.")
+        elif self.mode == "edit" and self.selected:
+            self.font_label.setText(f"원본 글꼴: {self.selected.font}\n새 글자가 없으면 맑은 고딕으로 대체합니다.")
+        elif self.mode == "object" and self.selected_object:
+            self.font_label.setText("내장 글꼴: " + self.selected_object.get("font_name", "맑은 고딕"))
+        self.draft_changed()
 
     def bind_shortcuts(self):
         for keys, callback in [("Ctrl+O", self.open_dialog), ("Ctrl+Shift+S", self.save_as),
@@ -753,7 +890,7 @@ class MainWindow(QMainWindow):
         for i in range(self.model.doc.page_count):
             item = QListWidgetItem(str(i + 1))
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            item.setSizeHint(QSize(132, 172))
+            item.setSizeHint(QSize(148, 208))
             self.thumbnails.addItem(item)
         self.thumbnails.setCurrentRow(0)
         self.thumbnails.blockSignals(False)
@@ -762,7 +899,7 @@ class MainWindow(QMainWindow):
         self.page_input.setMaximum(self.model.doc.page_count)
         self.page_input.setValue(1)
         self.page_input.blockSignals(False)
-        self.pages_title.setText(f"   페이지  ·  {self.model.doc.page_count}")
+        self.pages_title.setText(f"페이지  {self.model.doc.page_count}")
         self.page_total.setText(f"/ {self.model.doc.page_count}")
         self.set_mode("view")
         self.fit_width()
@@ -775,6 +912,7 @@ class MainWindow(QMainWindow):
         draft = None
         if self.has_draft:
             draft = dict(mode=self.mode, text=self.editor.toPlainText(), size=self.size_input.value(),
+                         font_id=self.selected_font_id,
                          color=[self.ink.redF(), self.ink.greenF(), self.ink.blueF()],
                          area=list(self.area) if self.area is not None else None,
                          selected=asdict(self.selected) if self.selected else None,
@@ -873,6 +1011,10 @@ class MainWindow(QMainWindow):
                     raise EditError("복구 입력 정보가 올바르지 않습니다.")
                 if not 5 <= draft["size"] <= 160 or len(draft["color"]) != 3 or not all(0 <= v <= 1 for v in draft["color"]):
                     raise EditError("복구 글자 서식이 올바르지 않습니다.")
+                if draft.get("font_id") is not None:
+                    if not isinstance(draft["font_id"], str):
+                        raise EditError("복구 글꼴 정보가 올바르지 않습니다.")
+                    font_bytes(draft["font_id"])
                 if draft["area"] is not None:
                     box = fitz.Rect(draft["area"])
                     if not all(math.isfinite(v) for v in box):
@@ -918,6 +1060,9 @@ class MainWindow(QMainWindow):
                     self.select_object(draft["object_id"])
                 if draft["area"] is not None:
                     self.set_area(fitz.Rect(draft["area"]))
+                if draft.get("font_id") is not None:
+                    self.set_font_choice(draft["font_id"])
+                    self.font_label.setText("선택한 글꼴을 PDF에 내장합니다. 한글 지원은 미리보기에서 확인하세요.")
                 self.editor.setPlainText(draft["text"])
                 self.size_input.setValue(draft["size"])
                 self.ink = QColor.fromRgbF(*draft["color"])
@@ -1009,6 +1154,8 @@ class MainWindow(QMainWindow):
                  "object": "추가한 항목을 선택하세요. 안쪽은 이동, 모서리는 크기 조절입니다."}
         self.panel_title.setText(titles[mode])
         self.panel_hint.setText(hints[mode])
+        if mode in ("edit", "text", "object"):
+            self.configure_font_picker(mode)
         self.editor.setVisible(mode in ("edit", "text"))
         self.font_label.setVisible(mode in ("edit", "text"))
         self.size_input.setEnabled(mode in ("edit", "text"))
@@ -1019,7 +1166,7 @@ class MainWindow(QMainWindow):
             self.size_input.setValue(14)
             self.ink = QColor("#203545")
             self.color_button.setStyleSheet(f"color: {self.ink.name()};")
-            self.font_label.setText("글꼴: 맑은 고딕")
+            self.font_label.setText("선택한 글꼴을 PDF에 내장합니다. 한글 지원은 미리보기에서 확인하세요.")
         for key, spin in self.geometry_inputs.items():
             spin.setEnabled(mode != "edit" or key == "width")
         self.view.show_page(True)
@@ -1046,6 +1193,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("문서가 바뀌었습니다. 수정할 글자를 다시 선택하세요.", 5000)
             return
         self.selected = span
+        self.set_font_choice(None)
         self.editor.setPlainText(span.text)
         self.size_input.setValue(span.size)
         self.ink = QColor.fromRgbF(*rgb(span.color))
@@ -1074,11 +1222,12 @@ class MainWindow(QMainWindow):
         self.selected_object = item
         self.selected = None
         if item["kind"] == "text":
+            self.set_font_choice(None)
             self.editor.setPlainText(item["text"])
             self.size_input.setValue(item["size"])
             self.ink = QColor.fromRgbF(*item["color"])
             self.color_button.setStyleSheet(f"color: {self.ink.name()};")
-            self.font_label.setText("추가한 텍스트 · 맑은 고딕")
+            self.font_label.setText("내장 글꼴: " + item.get("font_name", "맑은 고딕"))
         else:
             self.editor.clear()
         self.set_area(fitz.Rect(item["rect"]))
@@ -1137,12 +1286,12 @@ class MainWindow(QMainWindow):
             if self.mode == "object":
                 pix = self.model.preview_object(self.page_number, self.selected_object["id"], self.area,
                     self.editor.toPlainText(), self.size_input.value(),
-                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale())
+                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale(), self.selected_font_id)
                 result = None
             else:
                 pix, result = self.model.preview_text(
                     self.page_number, self.area, self.editor.toPlainText(), self.size_input.value(),
-                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale(), self.selected)
+                    (self.ink.redF(), self.ink.greenF(), self.ink.blueF()), self.view.render_scale(), self.selected, self.selected_font_id)
             self.view.page_item.setPixmap(pixmap_from_fitz(pix))
             self.view.preview_rendered = True
             message = "미리보기 · 아직 문서에 적용하지 않았습니다."
@@ -1182,7 +1331,7 @@ class MainWindow(QMainWindow):
 
     def draft_signature(self):
         return (self.editor.toPlainText(), self.size_input.value(), self.ink.rgb(),
-                tuple(self.area) if self.area is not None else None)
+                tuple(self.area) if self.area is not None else None, self.selected_font_id)
 
     @property
     def has_draft(self):
@@ -1227,12 +1376,12 @@ class MainWindow(QMainWindow):
             result = None
             if self.mode == "object" and self.selected_object:
                 self.model.update_object(self.page_number, self.selected_object["id"], self.area,
-                    self.editor.toPlainText(), self.size_input.value(), color)
+                    self.editor.toPlainText(), self.size_input.value(), color, self.selected_font_id)
             elif self.mode == "edit" and self.selected:
                 result = self.model.replace_text(self.page_number, self.selected, self.editor.toPlainText(),
-                                                 self.size_input.value(), color, self.area.width)
+                                                 self.size_input.value(), color, self.area.width, self.selected_font_id)
             elif self.mode == "text":
-                self.model.add_text(self.page_number, self.area, self.editor.toPlainText(), self.size_input.value(), color)
+                self.model.add_text(self.page_number, self.area, self.editor.toPlainText(), self.size_input.value(), color, self.selected_font_id)
             elif self.mode == "sign" and self.signature_data:
                 self.model.add_signature(self.page_number, self.area, self.signature_data)
             else:
@@ -1321,6 +1470,11 @@ class MainWindow(QMainWindow):
         self.redo_button.setEnabled(self.model.can_redo)
         self.apply_button.setEnabled(self.area is not None and (self.mode != "sign" or self.signature_data is not None))
         self.delete_object_button.setEnabled(self.selected_object is not None)
+        text_controls = self.mode in ("edit", "text") or (self.mode == "object" and self.selected_object is not None
+                                                           and self.selected_object["kind"] == "text")
+        self.font_combo.setVisible(text_controls)
+        self.font_caption.setVisible(text_controls)
+        self.font_combo.setEnabled(text_controls)
         if self.mode == "object":
             text_object = self.selected_object is not None and self.selected_object["kind"] == "text"
             self.editor.setVisible(text_object)
@@ -1350,7 +1504,7 @@ class MainWindow(QMainWindow):
             return
         self.fit_mode = True
         width = self.model.doc[self.page_number].rect.width
-        self.zoom = max(.25, min(2, (self.view.viewport().width() - 20) / (width + 52)))
+        self.zoom = max(.25, min(2, (self.view.viewport().width() - 20) / (width + PAGE_MARGIN * 2)))
         self.zoom_label.setText(f"{round(self.zoom * 100)}%")
         self.view.show_page()
         self.update_preview()

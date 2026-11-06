@@ -10,6 +10,7 @@ import base64
 
 import pymupdf as fitz
 from . import objects as placed
+from .fonts import font_bytes, default_font_id
 
 
 class EditError(Exception):
@@ -61,10 +62,10 @@ def _character_positions(page, excluded_index=None):
 
 
 def system_font(bold=False):
-    path = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / ("malgunbd.ttf" if bold else "malgun.ttf")
-    if not path.exists():
-        raise EditError("한글 글꼴을 찾지 못했습니다. Windows 맑은 고딕을 설치해 주세요.")
-    return fitz.Font(fontfile=str(path))
+    try:
+        return fitz.Font(fontbuffer=font_bytes(default_font_id(bold)))
+    except ValueError as exc:
+        raise EditError("편집용 맑은 고딕을 읽지 못했습니다. " + str(exc)) from exc
 
 
 def _font_roundtrips(font, text):
@@ -75,6 +76,14 @@ def _font_roundtrips(font, text):
         page.insert_font(fontname="Probe", fontbuffer=font.buffer)
         page.insert_text((10, 40), text, fontsize=10, fontname="Probe")
         return text in page.get_text()
+
+
+def _checked_font(font, text):
+    if not all(c.isspace() or font.has_glyph(ord(c), fallback=False) for c in text):
+        raise EditError("선택한 글꼴에서 표시할 수 없는 문자가 있습니다. 다른 글꼴을 선택해 주세요.")
+    if not _font_roundtrips(font, text):
+        raise EditError("선택한 글꼴의 문자 매핑을 검증하지 못했습니다. 다른 글꼴을 선택해 주세요.")
+    return font
 
 
 class PdfDocument:
@@ -173,7 +182,7 @@ class PdfDocument:
     def page_objects(self, number):
         return placed.objects(self.doc[number])
 
-    def update_object(self, number, object_id, rect, text=None, size=None, color=None):
+    def update_object(self, number, object_id, rect, text=None, size=None, color=None, font_id=None):
         def operation(doc):
             page = doc[number]
             item = next((o for o in placed.objects(page) if o["id"] == object_id), None)
@@ -182,7 +191,6 @@ class PdfDocument:
             box = fitz.Rect(rect)
             self._check_rect(page, box)
             position = page.get_contents().index(item["xref"])
-            page = placed.remove(page, [item])
             item["rect"] = list(box)
             if item["kind"] == "text":
                 item.update(text=item["text"] if text is None else text,
@@ -190,7 +198,11 @@ class PdfDocument:
                             color=item["color"] if color is None else color)
                 if not item["text"].strip():
                     raise EditError("내용을 입력하거나 ‘선택 항목 삭제’를 이용해 주세요.")
-            font = self._font(doc, page, None, item["text"])[0] if item["kind"] == "text" else None
+            font = None
+            if item["kind"] == "text":
+                font = (self._font(doc, page, None, item["text"], font_id)[0] if font_id is not None else
+                        self._placed_font(doc, page, item, item["text"]))
+            page = placed.remove(page, [item])
             placed.insert(page, item, font)
             new = next(o for o in placed.objects(page) if o["id"] == object_id)
             contents = [x for x in page.get_contents() if x != new["xref"]]
@@ -207,18 +219,31 @@ class PdfDocument:
             placed.remove(page, [item])
         return self._edit(operation)
 
-    def preview_object(self, number, object_id, rect, text, size, color, scale):
+    def preview_object(self, number, object_id, rect, text, size, color, scale, font_id=None):
         preview = PdfDocument()
         preview.doc = fitz.open()
         preview.editable = self.editable
         try:
             preview.doc.insert_pdf(self.doc, from_page=number, to_page=number)
-            preview.update_object(0, object_id, rect, text, size, color)
+            preview.update_object(0, object_id, rect, text, size, color, font_id)
             return preview.doc[0].get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
         finally:
             preview.doc.close()
 
-    def _font(self, doc, page, span, text):
+    def _placed_font(self, doc, page, item, text):
+        for resource in page.get_fonts(full=True):
+            if resource[4] == item["resource"][1] and resource[0]:
+                buffer = doc.extract_font(resource[0])[3]
+                return _checked_font(fitz.Font(fontbuffer=buffer), text)
+        raise EditError("추가 항목의 내장 글꼴을 찾지 못했습니다. 작업을 취소했습니다.")
+
+    def _font(self, doc, page, span, text, font_id=None):
+        if font_id is not None:
+            try:
+                font = fitz.Font(fontbuffer=font_bytes(font_id))
+            except ValueError as exc:
+                raise EditError(str(exc)) from exc
+            return _checked_font(font, text), False
         if span:
             target = span.font.split("+")[-1].replace(" ", "").lower()
             for item in page.get_fonts(full=True):
@@ -236,11 +261,9 @@ class PdfDocument:
             if base and all(ord(c) < 256 for c in text):
                 return fitz.Font(base), False
         font = system_font(bool(span and "bold" in span.font.lower()))
-        if not all(c.isspace() or font.has_glyph(ord(c), fallback=False) for c in text):
-            raise EditError("선택한 글꼴에서 표시할 수 없는 문자가 있습니다.")
-        return font, bool(span)
+        return _checked_font(font, text), bool(span)
 
-    def replace_text(self, number, selected: TextSpan, text: str, size=None, color=None, width=None):
+    def replace_text(self, number, selected: TextSpan, text: str, size=None, color=None, width=None, font_id=None):
         deleting = not text.strip()
         if not deleting and ("\n" in text or "\r" in text):
             raise EditError("본문은 한 줄씩 수정합니다. 여러 줄은 텍스트 추가로 넣어 주세요.")
@@ -251,6 +274,8 @@ class PdfDocument:
             if selected.index >= len(current) or current[selected.index] != selected:
                 raise EditError("문서가 바뀌었습니다. 수정할 글자를 다시 선택해 주세요.")
             managed = placed.objects(page)
+            managed_fonts = {item["id"]: self._placed_font(doc, page, item, item["text"])
+                             for item in managed if item["kind"] == "text"}
             if managed:
                 page = placed.remove(page, managed)
                 current = spans(page)
@@ -260,13 +285,20 @@ class PdfDocument:
                                  and fitz.Rect(o["rect"]).intersects(fitz.Rect(selected.bbox))), None)
                     if item is None:
                         raise EditError("추가한 텍스트는 ‘배치 편집’에서 수정해 주세요.")
+                    chosen_name = selected.font
                     for other in managed:
                         if other["id"] == item["id"]:
                             if deleting:
                                 continue
                             other.update(text=text, size=size or other["size"], color=color or other["color"])
-                        placed.insert(page, other, system_font() if other["kind"] == "text" else None)
-                    return {"deleted": deleting, "substituted": False, "font": "Malgun Gothic", "size": size or item["size"]}
+                        preserved = managed_fonts.get(other["id"])
+                        if other["id"] == item["id"]:
+                            preserved = (self._font(doc, page, None, text, font_id)[0] if font_id is not None else
+                                         _checked_font(preserved, text))
+                            chosen_name = preserved.name
+                        placed.insert(page, other, preserved)
+                    return {"deleted": deleting, "substituted": False,
+                            "font": chosen_name, "size": size or item["size"]}
                 selected = found
             if abs(selected.direction[0] - 1) > 0.01 or abs(selected.direction[1]) > 0.01:
                 raise EditError("회전·세로쓰기 본문 수정은 지원하지 않습니다. 텍스트 추가를 이용해 주세요.")
@@ -285,7 +317,7 @@ class PdfDocument:
                 available = float(width or box.width)
                 if available <= 0 or selected.origin[0] + available > page.cropbox.width + .1:
                     raise EditError("텍스트 영역이 페이지 밖으로 나갑니다.")
-                font, substituted = self._font(doc, page, selected, text)
+                font, substituted = self._font(doc, page, selected, text, font_id)
                 wanted = float(size or selected.size)
                 length = font.text_length(text, fontsize=wanted)
                 actual = min(wanted, wanted * available / max(length, .01))
@@ -314,7 +346,7 @@ class PdfDocument:
                 raise EditError("주변 글자의 위치·간격이 달라져 수정을 취소했습니다. 이 페이지는 텍스트 추가를 이용해 주세요.")
             if deleting:
                 for item in managed:
-                    placed.insert(page, item, system_font() if item["kind"] == "text" else None)
+                    placed.insert(page, item, managed_fonts.get(item["id"]))
                 return {"deleted": True, "substituted": False, "font": selected.font, "size": selected.size}
             resource = "PLFont" + str(doc.xref_length())
             page.insert_font(fontname=resource, fontbuffer=font.buffer)
@@ -324,12 +356,12 @@ class PdfDocument:
                 raise EditError("새 글자의 문자 매핑을 검증하지 못해 수정을 취소했습니다.")
             page = doc[number]
             for item in managed:
-                placed.insert(page, item, system_font() if item["kind"] == "text" else None)
+                placed.insert(page, item, managed_fonts.get(item["id"]))
             return {"substituted": substituted, "font": font.name, "size": actual}
 
         return self._edit(operation)
 
-    def add_text(self, number, rect, text, size=14, color=(.12, .16, .21)):
+    def add_text(self, number, rect, text, size=14, color=(.12, .16, .21), font_id=None):
         if not text.strip():
             raise EditError("추가할 내용을 입력해 주세요.")
 
@@ -337,7 +369,7 @@ class PdfDocument:
             page = doc[number]
             box = fitz.Rect(rect)
             self._check_rect(page, box)
-            font, _ = self._font(doc, page, None, text)
+            font, _ = self._font(doc, page, None, text, font_id)
             return placed.insert(page, dict(kind="text", rect=list(box), text=text, size=size, color=color), font)
 
         return self._edit(operation)
@@ -350,7 +382,7 @@ class PdfDocument:
             return placed.insert(page, dict(kind="signature", rect=list(box), image=base64.b64encode(image).decode("ascii")))
         return self._edit(operation)
 
-    def preview_text(self, number, rect, text, size, color, scale, selected=None):
+    def preview_text(self, number, rect, text, size, color, scale, selected=None, font_id=None):
         """현재 페이지만 복제해 실제 저장과 같은 편집 경로로 렌더링한다."""
         preview = PdfDocument()
         preview.doc = fitz.open()
@@ -358,9 +390,9 @@ class PdfDocument:
         try:
             preview.doc.insert_pdf(self.doc, from_page=number, to_page=number)
             if selected is not None:
-                result = preview.replace_text(0, selected, text, size, color, rect.width)
+                result = preview.replace_text(0, selected, text, size, color, rect.width, font_id)
             else:
-                preview.add_text(0, rect, text, size, color)
+                preview.add_text(0, rect, text, size, color, font_id)
                 result = None
             pix = preview.doc[0].get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
             return pix, result
