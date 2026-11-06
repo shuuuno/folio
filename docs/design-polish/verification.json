@@ -1,0 +1,220 @@
+{
+  "passed": true,
+  "method": "Qt 네이티브 검토 보조. 웹 DOM 검사가 아님",
+  "contrast_pairs": [
+    {
+      "foreground": "ink",
+      "background": "surface",
+      "ratio": 14.426,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "surface",
+      "ratio": 6.358,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "chrome",
+      "ratio": 5.865,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "canvas",
+      "ratio": 4.921,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "rail",
+      "ratio": 5.552,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent",
+      "ratio": 6.652,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent_hover",
+      "ratio": 8.265,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent_pressed",
+      "ratio": 9.903,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "accent",
+      "background": "selected",
+      "ratio": 5.686,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "danger",
+      "background": "surface",
+      "ratio": 6.717,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "selection_ink",
+      "background": "selection_text",
+      "ratio": 10.314,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "focus",
+      "background": "surface",
+      "ratio": 6.652,
+      "minimum": 3
+    },
+    {
+      "foreground": "focus",
+      "background": "chrome",
+      "ratio": 6.137,
+      "minimum": 3
+    },
+    {
+      "foreground": "control_border",
+      "background": "surface",
+      "ratio": 3.117,
+      "minimum": 3
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "01-empty-before.png",
+      "sha256": "79e8776c1c20530869953be6c8fda5a0772001dcd637f2eae1f5b176e78621e5",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "01-empty-after.png",
+      "sha256": "261eee9ded3717055ba5bf7eee18378992a5c190fb529e3c7e42b2cbb9a8fdf2",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "02-reading-before.png",
+      "sha256": "75449c10f901398f8e808033dd1ba1dfd70fa5b53bc75eb81ecbba234aa5a5b5",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "02-reading-after.png",
+      "sha256": "d4e9d0143931ae50cc71d962f66e2ef447c7e525f2c2cde6056fd7cf362ba742",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "03-edit-before.png",
+      "sha256": "04b5b88cd10f93251c222137b0753466f05f333356ab0b94b5d3a0e1232c6081",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "03-edit-after.png",
+      "sha256": "fd27e6850aedf230c8ec84bc60a97ca7e1e32377e4c20f2f3be6d593e1edf324",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "04-text-before.png",
+      "sha256": "2ab7e2781932104d8c69497adec76df5c913d1848b5def24af9dd07266a0ffa0",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "04-text-after.png",
+      "sha256": "6ad560c80dcbbff2e1f9cca8119991b0de2668649a6ee14b44e670a365b11719",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "05-compact-before.png",
+      "sha256": "1234eb2e7a09f474ae18f8f325b475556bb9565553b86b431e7f15fec1303414",
+      "pixels": [
+        1680,
+        1120
+      ]
+    },
+    {
+      "file": "05-compact-after.png",
+      "sha256": "8378d117b9f8a39404c09a760051ef790542ffd5b401acf24a031f107f41d2d6",
+      "pixels": [
+        1680,
+        1120
+      ]
+    },
+    {
+      "file": "06-conversion-before.png",
+      "sha256": "c634ec086abc89fa2c6993a0d0154724542ae50270df754082f12fd7b39ac037",
+      "pixels": [
+        1225,
+        1085
+      ]
+    },
+    {
+      "file": "06-conversion-after.png",
+      "sha256": "beffed932f314711f8058d6eb7287cff543d793cb8076966615bc5fcf95264ac",
+      "pixels": [
+        1260,
+        1155
+      ]
+    },
+    {
+      "file": "07-signature-before.png",
+      "sha256": "4239d584db7a462de0a346b0fa0cae77c33cdacfc6d6f5bea70ec84b4c21cacb",
+      "pixels": [
+        1085,
+        735
+      ]
+    },
+    {
+      "file": "07-signature-after.png",
+      "sha256": "eef1eb5f53db78b6ead01be69241e9880aaa7bde21c8f8b983743622f63bb448",
+      "pixels": [
+        1085,
+        784
+      ]
+    },
+    {
+      "file": "08-placement-before.png",
+      "sha256": "911ac3d1f4550a351efffeab7ec6498eb2b68e217771dba008bc15d636b5a7da",
+      "pixels": [
+        2450,
+        1680
+      ]
+    },
+    {
+      "file": "08-placement-after.png",
+      "sha256": "3c8f52b5f8d35c7d3d9b7c853076e94f5bc89c85cada64e2b9291b5c2aee9442",
+      "pixels": [
+        2450,
+        1680
+      ]
+    }
+  ]
+}

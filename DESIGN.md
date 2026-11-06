@@ -3,54 +3,63 @@ name: Folio
 description: 문서에 시선을 모으는 밝고 미니멀한 Windows PDF 작업 공간
 colors:
   ink: "#202A3B"
-  muted: "#667187"
-  accent: "#4361DE"
-  accent-hover: "#3451C8"
-  accent-pressed: "#2B44AE"
-  selected: "#EBEFFE"
-  border: "#E1E5ED"
-  canvas: "#EDF0F5"
+  muted: "#526078"
+  accent: "#3451C8"
+  accent-hover: "#2B44AE"
+  accent-pressed: "#243A96"
+  selected: "#E8EDFC"
+  border: "#D7DFEA"
+  control-border: "#8593A8"
+  canvas: "#DCE3ED"
   surface: "#FFFFFF"
-  chrome: "#F7F8FB"
-  hover: "#F0F3F9"
-  pressed: "#E5EAF4"
-  focus-button: "#8D9FEE"
-  focus-input: "#8095E8"
-  disabled: "#9CA6B6"
-  disabled-primary-bg: "#DDE3F6"
-  disabled-primary-ink: "#7C89AE"
-  danger: "#A6434A"
-  danger-hover: "#FFF0F1"
+  chrome: "#F3F6FA"
+  rail: "#EBF0F7"
+  hover: "#E9EEF6"
+  pressed: "#DCE4F0"
+  focus-button: "#3451C8"
+  focus-input: "#3451C8"
+  disabled: "#929DAF"
+  disabled-primary-bg: "#E0E6F2"
+  disabled-primary-ink: "#7785A2"
+  danger: "#A13644"
+  danger-hover: "#FCECEF"
   selection-text: "#DCE5FF"
   selection-ink: "#24314C"
-  window-bar: "#F1F3F8"
-  document-tab-hover: "#E6EAF2"
+  window-bar: "#E8EDF5"
+  document-tab-hover: "#DCE4F0"
   window-close-hover: "#FBDDE0"
 typography:
   wordmark:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "19px"
+    fontSize: "21px"
     fontWeight: 600
   headline:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "24px"
+    fontSize: "32px"
     fontWeight: 600
   title:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "17px"
+    fontSize: "22px"
     fontWeight: 600
   introduction:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "14px"
+    fontSize: "16px"
   body:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "13px"
+    fontSize: "14px"
   label:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "12px"
+    fontSize: "13px"
   compact:
     fontFamily: "Pretendard Variable, Malgun Gothic"
-    fontSize: "11px"
+    fontSize: "12px"
+  dialog:
+    fontFamily: "Pretendard Variable, Malgun Gothic"
+    fontSize: "26px"
+    fontWeight: 600
+  editor:
+    fontFamily: "Pretendard Variable, Malgun Gothic"
+    fontSize: "15px"
 rounded:
   compact: "4px"
   item: "5px"
@@ -62,14 +71,14 @@ spacing:
   inspector: "16px"
 components:
   wordmark:
-    textColor: "{colors.accent}"
+    textColor: "{colors.ink}"
     typography: "{typography.wordmark}"
     width: "70px"
   button-primary:
     backgroundColor: "{colors.accent}"
     textColor: "{colors.surface}"
     rounded: "{rounded.control}"
-    padding: "7px 16px"
+    padding: "9px 18px"
   button-primary-hover:
     backgroundColor: "{colors.accent-hover}"
   button-primary-active:
@@ -96,22 +105,23 @@ components:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    padding: "6px"
+    padding: "7px"
   search:
     backgroundColor: "{colors.chrome}"
     rounded: "{rounded.control}"
     padding: "7px 8px"
-    width: "180px"
+    minWidth: "140px"
+    maxWidth: "220px"
   tool-selected:
-    backgroundColor: "{colors.chrome}"
-    textColor: "{colors.accent}"
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.surface}"
     rounded: "{rounded.control}"
-    padding: "8px 4px"
-    width: "60px"
-    height: "56px"
+    padding: "8px 6px"
+    width: "100px"
+    height: "44px"
   document-tab:
     backgroundColor: "transparent"
-    textColor: "#606D83"
+    textColor: "{colors.muted}"
     rounded: "4px 4px 0 0"
     padding: "6px 12px"
   document-tab-selected:
@@ -145,7 +155,7 @@ components:
 
 표시 제품명은 Folio이며 창 제목·트레이·실행 파일·설치·시작 메뉴·기본 앱에도 같은 이름을 쓴다. 기존 데이터·IPC·설치 식별자인 Paperlight와 Python 패키지 경로는 유지한다. PDF 안의 기존 콘텐츠는 브랜드 변경 대상이 아니다.
 
-기준 구현은 `paperlight/theme.py`, `style.py`, `icons.py`, `chrome.py`, `workspace.py`, `window.py`와 앱 시작점 `__main__.py`다. 이 문서는 구현된 재사용 규칙을 기록한다. 화면별 구성은 `.impeccable/surfaces/workspace.md`에 둔다. 확인한 소스의 SHA-256은 `.impeccable/design.json`의 `extensions.native.sourceHashes`에 기록한다.
+기준 구현은 `paperlight/theme.py`, `style.py`, `icons.py`, `chrome.py`, `workspace.py`, `window.py`와 앱 시작점 `__main__.py`다. 이 문서는 구현된 재사용 규칙을 기록한다. 화면별 구성은 `.impeccable/surfaces/workspace.md`에 둔다. 최신 전후 화면과 검사 결과는 `docs/design-polish/`다. `.impeccable/design.json`의 소스 해시·HTML 표본은 이번 변경 전 기록이다.
 
 ## Colors
 
@@ -159,17 +169,17 @@ components:
 
 배포에 포함한 `assets/fonts/PretendardVariable.ttf`를 Qt에 등록한다. 스타일의 대체 글꼴은 맑은 고딕이다. UI 글꼴과 PDF 내부의 편집 글꼴은 별개다.
 
-Windows에서 Qt 플랫폼이 미지정 또는 `windows`일 때 QApplication 생성 인수에 `windows:fontengine=freetype`를 지정한다. 기본 13px 글꼴에 `PreferAntialias`와 `PreferVerticalHinting`을 적용한다. 이는 앱 안의 글자 렌더링 설정이며 Windows 전체 글꼴 설정은 바꾸지 않는다. HTML/CSS 표본은 이 네이티브 렌더러의 결과를 재현하거나 검증하지 않는다.
+Windows에서 Qt 플랫폼이 미지정 또는 `windows`일 때 QApplication 생성 인수에 `windows:fontengine=freetype`를 지정한다. 기본 14px 글꼴에 `PreferAntialias`와 `PreferVerticalHinting`을 적용한다. 이는 앱 안의 글자 렌더링 설정이며 Windows 전체 글꼴 설정은 바꾸지 않는다. HTML/CSS 표본은 이 네이티브 렌더러의 결과를 재현하거나 검증하지 않는다.
 
-`wordmark`는 제목줄의 Folio 라벨, `headline`은 시작 화면 제목, `title`은 속성 패널 제목, `introduction`은 시작 안내, `body`는 메뉴·탭·버튼을 포함한 조작부, `label`은 보조 설명, `compact`는 도구막대·상태 표시줄에 쓴다. 통합 작업 창의 브랜드 라벨은 한 번만 표시한다. 주요 버튼은 굵기 600, 속성 캡션은 550이다. 행간과 자간을 별도로 지정하지 않으며 Qt의 글꼴 계측을 따른다.
+`wordmark`는 제목줄의 Folio 라벨, `headline`은 기존 빈 화면 제목, `title`은 속성 패널 제목, `dialog`는 변환·서명 제목, `editor`는 편집 입력, `introduction`은 빈 화면 안내, `body`는 메뉴·탭·버튼, `label`은 도구명·보조 설명, `compact`는 상태 표시줄에 쓴다. 통합 작업 창의 브랜드 라벨은 한 번만 표시한다. 주요 버튼·제목·속성 캡션은 굵기 600이다. 행간과 자간은 Qt의 글꼴 계측을 따른다. 정확한 값의 원본은 `theme.py`의 `TYPE`다.
 
 ## Layout
 
 Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 작업 표시줄을 제외한 화면 안에서 최대 1400×960, 최소 창은 960×640이다. 최상단은 Windows 제목줄과 문서 탭을 합친 `window-bar`다. 왼쪽 8px 여백부터 고정 너비의 Folio 워드마크, 문서 탭, 바로 옆 34×32px 파일 추가 버튼, 빈 이동 영역, 오른쪽 최소화·최대화·닫기 순으로 놓인다. 워드마크는 라벨 안에서 가로·세로 가운데 정렬한다. 파일 추가 뒤에는 최소 80px의 빈 영역을 남긴다. 별도 제품명 배너나 OS 제목줄을 중복 표시하지 않는다.
 
-그 아래 파일·열기·변환·저장 헤더, 문서 도구줄과 작업 공간이 놓인다. 헤더의 내부 여백은 왼쪽 16·위아래 6·오른쪽 12px이며 요소 간격은 `header-gap`이다.
+그 아래 파일·열기·변환을 왼쪽에 모으고 변경 상태·저장·설정을 오른쪽에 둔다. 헤더 내부 여백은 왼쪽 16·위아래 9·오른쪽 12px이며 요소 간격은 `header-gap`이다. 문서 도구줄은 옅은 바탕으로 분리한다.
 
-왼쪽 도구막대는 68px, 도구는 60×56px이다. 페이지 목록은 155~210px, 오른쪽 속성 패널은 270~330px이며 중앙 문서가 남는 너비를 사용한다. 초기 분할 크기는 180·850·300px이며 실제 창 크기에 맞춰 Qt가 배분한다. 페이지 목록을 접고 읽기 모드에서 속성 패널을 숨겨 문서 영역을 확보한다. 속성 패널 여백은 16·16·16·12px, 세로 간격은 8px이다.
+왼쪽 도구막대는 112px, 아이콘 옆에 글자가 있는 도구 행은 100×44px이다. 읽기와 편집 도구 사이 간격을 둔다. 페이지 목록은 155~180px, 오른쪽 속성 패널은 288~340px이며 중앙 문서가 남는 너비를 사용한다. 초기 분할 크기는 160·850·320px이며 Qt가 실제 창 크기에 맞춰 배분한다. 페이지 목록을 접고 읽기 모드에서 속성 패널을 숨겨 문서 영역을 확보한다. 속성 입력 영역은 여백 20·24·20·20px, 세로 간격 12px이며 세로로 스크롤한다. 적용·취소·삭제와 저장 안내는 흰 하단 영역에 고정한다.
 
 웹·모바일 중단점은 없다. 이 치수는 Qt 논리 픽셀 기준이며 Windows 배율과 글꼴 계측의 영향을 받는다. 탭의 긴 이름은 가운데를 생략하고 툴팁으로 전체 경로를 제공한다. 탭이 많으면 Qt 스크롤 버튼을 사용한다.
 
@@ -185,11 +195,11 @@ Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 작업 �
 
 ## Components
 
-- **워드마크:** `QLabel`로 그리는 Folio 글자이며 이미지 로고가 아니다. `wordmark`의 글꼴·너비와 `accent` 색을 사용한다. 마우스 이벤트를 통과시켜 제목줄의 창 이동을 방해하지 않는다.
+- **워드마크:** `QLabel`로 그리는 Folio 글자이며 이미지 로고가 아니다. `wordmark`의 글꼴·너비와 `ink` 색을 사용한다. 마우스 이벤트를 통과시켜 제목줄의 창 이동을 방해하지 않는다.
 - **주요 버튼:** 파란 바탕·흰 글자. hover, pressed, disabled 색을 각각 갖고 키보드 포커스는 테두리로 표시한다.
 - **일반·보조·삭제 버튼:** 일반은 투명, 보조는 흰 바탕과 경계선, 삭제는 붉은 글자다. 일반 hover·pressed는 중립색, 삭제 hover는 연한 붉은 배경이다. 비활성 상태는 흐린 글자로 구분한다.
-- **입력:** 흰 바탕과 경계선, hover 시 경계 강화, focus 시 파란 테두리다. 검색 입력은 평상시 `chrome`, focus 시 흰 바탕이다. 스핀 입력은 오른쪽 상하 버튼을 유지한다.
-- **도구 탐색:** 아이콘 아래 한국어 이름을 보인다. 선택 상태는 연한 파란 바탕·파란 글자·굵기 600으로 구분한다. 아이콘 전용 동작에는 툴팁과 접근성 이름을 둔다.
+- **입력:** 흰 바탕과 `control-border` 경계선, hover 시 경계 강화, focus 시 2px 파란 테두리다. 포커스에서 안쪽 여백을 1px 줄여 전체 크기를 유지한다. 검색 입력은 평상시 `chrome`, focus 시 흰 바탕이다. 스핀 입력은 오른쪽 상하 버튼을 유지한다.
+- **도구 탐색:** 아이콘 옆에 13px 한국어 이름을 보인다. 선택 상태는 진한 파란 바탕·흰 글자와 아이콘·굵기 600으로 구분한다. 아이콘 전용 동작에는 툴팁과 접근성 이름을 둔다.
 - **문서 탭:** `window-bar` 위에 비선택 탭을 투명하게 놓고 선택 탭은 흰 바탕으로 연결한다. 위쪽 여백 5px·오른쪽 여백 3px, 최소 너비 110px·최대 210px이다. 비선택 hover에는 `document-tab-hover`를 쓴다. 닫기는 별도 선 아이콘 버튼이다. 저장하지 않은 변경은 탭의 `*`와 헤더 상태 문구로 표시한다.
 - **통합 창 조작부:** `FramelessWindowHint`로 기존 OS 제목줄을 대신한다. 빈 상단 영역의 드래그는 `startSystemMove`, 더블클릭은 최대화·복원에 연결한다. 창 조작 아이콘은 16px이며 최대화 상태에서는 복원 아이콘·접근성 이름으로 바뀐다. 닫기 hover는 `window-close-hover`다. 가장자리 크기 조절은 Win32 `WM_NCHITTEST`와 물리 화면 좌표를 사용하고, 감지 폭은 `round(6 × devicePixelRatioF())`이다. 최대화·전체 화면에서는 이 감지를 하지 않는다. 닫기는 기존 창 종료 처리로 연결해 트레이 설정과 미저장 입력 보호를 유지한다.
 - **목록·메뉴:** 선택 배경은 연한 파란색이다. 페이지 썸네일의 선택에는 별도 테두리를 더한다. 메뉴의 비활성 항목은 흐린 글자다.
@@ -214,6 +224,6 @@ Qt Widgets의 레이아웃과 분할 창을 사용한다. 기본 창은 작업 �
 
 ## 0.10 전체 UI 정리
 
-변환·서명·복구 창은 24px 바깥 여백, 12px 그룹 간격, 17px/600 제목을 공유한다. 변환은 라벨이 붙은 옵션과 결과 형식에 맞는 설명을 보여주며, 관련 없는 옵션은 비활성화한다. 서명 적용은 실제 획이 있을 때만 활성화한다. 빈 문서의 탐색·확대·저장도 비활성 상태로 표현한다.
+변환은 28px 바깥 여백과 14px 그룹 간격, 서명·복구는 24px 여백과 12px 간격을 쓴다. 변환·서명 제목은 26px/600, 복구 제목은 22px/600이다. 변환은 라벨이 붙은 옵션과 결과 형식에 맞는 설명을 보여주며, 관련 없는 옵션은 비활성화한다. 서명 적용은 실제 획이 있을 때만 활성화한다. 빈 문서의 탐색·확대·저장도 비활성 상태로 표현한다.
 
-오른쪽 패널은 세로 스크롤을 허용하고 가로 스크롤은 생기지 않도록 숫자 입력 너비를 배분한다. 960×640에서도 적용 버튼을 스크롤로 찾을 수 있다. 선택 도구는 중립 바탕과 파란 글자·아이콘, 선택 페이지는 흰 바탕과 파란 테두리로 구분한다. 기능을 뜻하는 선 아이콘과 실제 문서 그림자는 유지하며 장식용 아이콘·배지·색상은 추가하지 않는다.
+오른쪽 패널은 입력 영역만 세로 스크롤하며 가로 스크롤은 생기지 않도록 숫자 입력 너비를 배분한다. 960×640에서도 적용·취소 영역은 스크롤과 무관하게 하단에 보인다. 선택 도구는 진한 파란 바탕과 흰 글자·아이콘, 선택 페이지는 옅은 선택 바탕과 파란 테두리로 구분한다. 기능을 뜻하는 선 아이콘과 실제 문서 그림자는 유지하며 장식용 아이콘·배지·색상은 추가하지 않는다.

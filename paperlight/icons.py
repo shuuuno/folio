@@ -1,15 +1,19 @@
 """24px 격자 위에 같은 선 두께로 그린 UI 아이콘."""
 from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QPen, QColor, QPainterPath
+from .theme import COLORS
 
 
-def icon(name, color="#566176"):
+def icon(name, color=None, *, checked_color=None):
+    color = color or COLORS["muted"]
+    checked_color = checked_color or COLORS["accent"]
     result = QIcon()
     for mode, state, ink in ((QIcon.Mode.Normal, QIcon.State.Off, color),
-                             (QIcon.Mode.Normal, QIcon.State.On, "#4361DE"),
+                             (QIcon.Mode.Normal, QIcon.State.On, checked_color),
                              (QIcon.Mode.Active, QIcon.State.Off, color),
-                             (QIcon.Mode.Disabled, QIcon.State.Off, "#ADB5C2"),
-                             (QIcon.Mode.Disabled, QIcon.State.On, "#ADB5C2")):
+                             (QIcon.Mode.Active, QIcon.State.On, checked_color),
+                             (QIcon.Mode.Disabled, QIcon.State.Off, COLORS["disabled"]),
+                             (QIcon.Mode.Disabled, QIcon.State.On, COLORS["disabled"])):
         for size in (16, 20, 24, 32):
             pix = QPixmap(size * 2, size * 2)
             pix.fill(Qt.GlobalColor.transparent)

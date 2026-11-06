@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QToolButton,
 from .window import MainWindow
 from .style import STYLE
 from .icons import icon
-from .theme import install_theme
+from .theme import install_theme, COLORS
 from .chrome import DocumentTabs, WindowBar, resize_hit
 from . import DISPLAY_NAME
 
@@ -36,17 +36,16 @@ class Workspace(QMainWindow):
         header = QWidget()
         header.setObjectName("appHeader")
         row = QHBoxLayout(header)
-        row.setContentsMargins(16, 6, 12, 6)
+        row.setContentsMargins(16, 9, 12, 9)
         row.setSpacing(8)
         file_button = QToolButton()
         file_button.setText("파일")
+        file_button.setAccessibleName("파일 메뉴")
         file_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         row.addWidget(file_button)
-        row.addStretch()
         self.document_state = QLabel()
         self.document_state.setObjectName("muted")
-        row.addWidget(self.document_state)
-        row.addSpacing(10)
+        row.addSpacing(12)
         for label, symbol, callback in (("열기", "folder", lambda: self.current.open_dialog()),
                                          ("변환", "convert", self.show_conversion)):
             button = QPushButton(label)
@@ -54,9 +53,12 @@ class Workspace(QMainWindow):
             button.setIconSize(QSize(18, 18))
             button.clicked.connect(callback)
             row.addWidget(button)
+        row.addStretch()
+        row.addWidget(self.document_state)
+        row.addSpacing(12)
         self.save_button = QPushButton("저장")
         self.save_button.setObjectName("primary")
-        self.save_button.setIcon(icon("save", "#FFFFFF"))
+        self.save_button.setIcon(icon("save", COLORS["surface"]))
         self.save_button.setToolTip("다른 이름으로 저장 · Ctrl+S")
         self.save_button.clicked.connect(lambda: self.current.save_as())
         row.addWidget(self.save_button)

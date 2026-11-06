@@ -94,7 +94,7 @@ class SignatureDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
         title = QLabel("서명 만들기")
-        title.setObjectName("sectionTitle")
+        title.setObjectName("dialogTitle")
         layout.addWidget(title)
         layout.addWidget(QLabel("아래에 서명을 그리거나 PNG·JPG 이미지를 선택하세요."))
         self.pad = InkPad()

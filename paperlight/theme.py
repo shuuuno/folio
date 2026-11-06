@@ -5,8 +5,16 @@ import sys
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QPalette
 from PySide6.QtWidgets import QApplication
 
-COLORS = dict(ink="#202A3B", muted="#667187", accent="#4361DE", accent_hover="#3451C8",
-              selected="#EBEFFE", border="#E1E5ED", canvas="#EDF0F5", surface="#FFFFFF", chrome="#F7F8FB")
+COLORS = dict(ink="#202A3B", muted="#526078", accent="#3451C8", accent_hover="#2B44AE",
+              accent_pressed="#243A96", selected="#E8EDFC", border="#D7DFEA",
+              canvas="#DCE3ED", surface="#FFFFFF", chrome="#F3F6FA", rail="#EBF0F7",
+              window_bar="#E8EDF5", tab_hover="#DCE4F0", hover="#E9EEF6", pressed="#DCE4F0",
+              focus="#3451C8", disabled="#929DAF", disabled_primary_bg="#E0E6F2",
+              disabled_primary_ink="#7785A2", danger="#A13644", danger_hover="#FCECEF",
+              selection_text="#DCE5FF", selection_ink="#24314C", control_border="#8593A8", border_hover="#63758F",
+              scrollbar="#B7C3D3", tooltip="#253249", close_hover="#FBDDE0")
+TYPE = dict(body=14, compact=12, label=13, editor=15, introduction=16,
+            title=22, dialog=26, headline=32, wordmark=21)
 _loaded = False
 
 
@@ -26,17 +34,17 @@ def install_theme():
         QFontDatabase.addApplicationFont(str(Path(__file__).resolve().parents[1] / "assets/fonts/PretendardVariable.ttf"))
         _loaded = True
     font = QFont("Pretendard Variable")
-    font.setPixelSize(13)
+    font.setPixelSize(TYPE["body"])
     font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     font.setHintingPreference(QFont.HintingPreference.PreferVerticalHinting)
     app.setFont(font)
     palette = QPalette()
-    for role, value in ((QPalette.ColorRole.Window,"#FFFFFF"),(QPalette.ColorRole.Base,"#FFFFFF"),
-                        (QPalette.ColorRole.AlternateBase,"#F7F8FB"),(QPalette.ColorRole.Button,"#FFFFFF"),
-                        (QPalette.ColorRole.WindowText,"#202A3B"),(QPalette.ColorRole.Text,"#202A3B"),
-                        (QPalette.ColorRole.ButtonText,"#202A3B"),(QPalette.ColorRole.Highlight,"#EBEFFE"),
-                        (QPalette.ColorRole.HighlightedText,"#3451C8"),(QPalette.ColorRole.PlaceholderText,"#667187")):
-        palette.setColor(role, QColor(value))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor("#9CA6B6"))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor("#9CA6B6"))
+    for role, name in ((QPalette.ColorRole.Window, "surface"), (QPalette.ColorRole.Base, "surface"),
+                       (QPalette.ColorRole.AlternateBase, "chrome"), (QPalette.ColorRole.Button, "surface"),
+                       (QPalette.ColorRole.WindowText, "ink"), (QPalette.ColorRole.Text, "ink"),
+                       (QPalette.ColorRole.ButtonText, "ink"), (QPalette.ColorRole.Highlight, "selected"),
+                       (QPalette.ColorRole.HighlightedText, "accent"), (QPalette.ColorRole.PlaceholderText, "muted")):
+        palette.setColor(role, QColor(COLORS[name]))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(COLORS["disabled"]))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(COLORS["disabled"]))
     app.setPalette(palette)

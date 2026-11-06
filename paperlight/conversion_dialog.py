@@ -6,7 +6,7 @@ import tempfile
 from PySide6.QtCore import QProcess, QUrl, Signal, Qt
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget,
-                              QComboBox, QLineEdit, QFileDialog, QProgressBar, QMessageBox, QFormLayout)
+                              QComboBox, QLineEdit, QFileDialog, QProgressBar, QMessageBox, QFormLayout, QFrame)
 
 
 class ConversionDialog(QDialog):
@@ -15,17 +15,17 @@ class ConversionDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("파일 변환")
-        self.resize(700, 620)
+        self.resize(720, 660)
         self.setModal(False)
         self.running = False
         self.process = None
         self.temporary = None
         self.outputs = []
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 20)
-        layout.setSpacing(12)
+        layout.setContentsMargins(28, 28, 28, 24)
+        layout.setSpacing(14)
         title = QLabel("파일 변환")
-        title.setObjectName("sectionTitle")
+        title.setObjectName("dialogTitle")
         layout.addWidget(title)
         row = QHBoxLayout()
         add = QPushButton("파일 선택")
@@ -44,6 +44,9 @@ class ConversionDialog(QDialog):
         self.sources.setMinimumHeight(90)
         self.sources.setMaximumHeight(160)
         layout.addWidget(self.sources)
+        rule = QFrame()
+        rule.setObjectName("sectionRule")
+        layout.addWidget(rule)
         options = QFormLayout()
         options.setHorizontalSpacing(20)
         options.setVerticalSpacing(10)
@@ -63,6 +66,9 @@ class ConversionDialog(QDialog):
             self.dpi.addItem(f"{dpi} DPI", dpi)
         self.dpi.setCurrentIndex(1)
         options.addRow("이미지 해상도", self.dpi)
+        for control, name in ((self.format, "결과 형식"), (self.mode, "Office 문서 구성"),
+                              (self.dpi, "이미지 해상도")):
+            control.setAccessibleName(name)
         layout.addLayout(options)
         hint = self.format_hint = QLabel()
         hint.setWordWrap(True)
@@ -81,6 +87,7 @@ class ConversionDialog(QDialog):
         destination_form = QFormLayout()
         destination_form.setHorizontalSpacing(20)
         destination_form.addRow("저장 위치", row)
+        destination_form.labelForField(row).setBuddy(self.destination)
         for form in (options, destination_form):
             for index in range(form.rowCount()):
                 form.itemAt(index, QFormLayout.ItemRole.LabelRole).widget().setMinimumWidth(108)
