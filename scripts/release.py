@@ -109,7 +109,14 @@ def main():
     # vpk가 만든 포터블은 업데이트 가능한 구조다. 기존 포터블 계약에 맞게
     # 설치 정보가 없는 원래 폴더 ZIP을 배포하고 vpk 포터블은 제외한다.
     (release / "Folio-win-Portable.zip").unlink(missing_ok=True)
-    shutil.make_archive(str(release / f"Folio-{__version__}-Portable"), "zip", payload.parent, payload.name)
+    portable_name = f"Folio-{__version__}-Portable"
+    shutil.make_archive(str(release / portable_name), "zip", payload.parent, payload.name)
+    catalog_path = release / "assets.win.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    for asset in catalog:
+        if asset["Type"] == "Portable":
+            asset["RelativeFileName"] = portable_name + ".zip"
+    catalog_path.write_text(json.dumps(catalog), encoding="utf-8")
     source = release / f"Folio-{__version__}-Source.zip"
     subprocess.run(["git", "archive", "--format=zip", f"--prefix=Folio-{__version__}/",
                     "-o", str(source), commit], cwd=ROOT, check=True)
