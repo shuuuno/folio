@@ -6,8 +6,8 @@ Windows 개인용 오프라인 PDF 뷰어·편집기. 한국어 UI. 문서 외�
 - 개발: `.venv\Scripts\python.exe -m paperlight`
 - 검증: `.venv\Scripts\python.exe -m unittest discover -s tests -v`
 - 배포: `.venv\Scripts\python.exe scripts/build.py`
-- 팀 배포: 깨끗한 Git 커밋에서 `scripts/release.py`, 설치/제거 QA는 `scripts/verify_installer.py`. 빌드 출력은 `build/distribution`, 배포물은 `release/<버전>`. 실행 중인 `dist/Paperlight`를 덮어쓰지 않는다.
-- `assets/`는 배포 예제/아이콘이다. `evidence/`, 타사 바이너리·조사 원본은 Git에 넣지 않는다. NSIS는 현재 사용자 설치이며 제거 시 생성 목록의 파일만 지우고 서명/복구본은 유지한다.
+- 팀 배포: 깨끗한 Git 커밋에서 `scripts/release.py`, 설치/제거 QA는 `scripts/verify_installer.py`. 0.11.0부터 Velopack Python/CLI 1.2.161을 함께 사용한다. `--bump`는 버전만 수정하고 `--publish`만 GitHub Release를 게시한다. 빌드 출력은 `build/distribution`, 배포물은 `release/<버전>`. 실행 중인 `dist/Paperlight`를 덮어쓰지 않는다.
+- `assets/`는 배포 예제/아이콘이다. `evidence/`, 타사 바이너리·조사 원본은 Git에 넣지 않는다. 기존 NSIS 제거기는 생성 목록의 파일만 지운다. Velopack 설치 폴더는 교체·제거 대상이며 사용자 문서를 넣지 않는다. 별도 데이터 폴더의 서명/복구본은 유지한다.
 - `workspace.py`는 탭별 MainWindow를 보관한다. 전역 종료는 모든 탭 확인 후 복구본을 정리한다. `instance.py`는 사용자별 QLockFile/로컬 파이프로 탐색기 열기를 전달하며 외부 통신을 하지 않는다.
 - `chrome.py`는 탭 바와 문서 스택의 순서를 동기화하고 통합 창 조작부를 제공한다. Windows 가장자리 판정은 물리 픽셀, Qt 배치는 논리 픽셀이다. 창 닫기 버튼도 기존 closeEvent의 트레이/미저장 보호를 거친다.
 - `conversion.py`는 별도 프로세스에서 변환하고 전체 성공 후 새 결과만 게시한다. Office 자동화는 직접 연 문서만 닫고 기존 사용자 Office 인스턴스를 종료하지 않는다. 변환 취소는 파일 처리 경계에서 적용한다.
@@ -27,3 +27,4 @@ Windows 개인용 오프라인 PDF 뷰어·편집기. 한국어 UI. 문서 외�
 - 복구/네이티브 QA는 반드시 `window.data_dir`를 증거 폴더 아래로 격리한다. `.venv\Scripts\python.exe -m paperlight --verify-recovery-native evidence\recovery-check`는 자체 검증용 자식만 강제 종료하고 Windows 복구 창을 표시한다. 사용자 프로세스를 종료하지 않는다.
 
 - 0.10부터 배포 이름은 Folio/Folio.exe. Python 패키지, QSettings 조직·앱 이름, 데이터 경로, IPC 이름, PDF 내부 객체 키, Paperlight.PDF ProgID, 제거 등록 키는 호환을 위해 유지한다. Windows 표시명은 Folio이며 RegisteredApplications 후보 이름은 Folio다. 구버전 업그레이드 QA는 `scripts/verify_installer.py --upgrade-from <이전 Setup.exe>`로 확인한다.
+- 0.11부터 설치 위치는 `%LOCALAPPDATA%/Folio`이며 Velopack의 제거 키는 Folio다. 0.10 이하 NSIS에서 전환은 수동 제거·재설치한다. 위의 이전 제거 키·업그레이드 QA 설명은 NSIS 버전에 해당한다. `updates.py`의 bootstrap은 Qt/IPC보다 먼저 호출한다. 설치판만 GitHub 안정 버전을 확인·다운로드하며 재시작은 모든 탭 종료 확인 후 예약한다. 개발/일반 포터블은 네트워크 요청하지 않는다. 전체 이력 공개 검사는 `scripts/scan_publication.py --gitleaks <경로>`다.

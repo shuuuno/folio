@@ -36,3 +36,38 @@ def register_pdf_app():
         except FileNotFoundError:
             pass
     ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)
+
+
+def unregister_pdf_app():
+    """현재 제거 중인 실행 파일이 소유한 후보 등록만 정리한다."""
+    expected = dict(((path, name), value) for path, name, value in registration_values(sys.executable))
+    command_key = r"Software\Classes\Paperlight.PDF\shell\open\command"
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, command_key, 0,
+                            winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key:
+            if winreg.QueryValueEx(key, "")[0] != expected[(command_key, "")]:
+                return
+    except FileNotFoundError:
+        return
+    # 하위 키를 역순으로 지운다. UserChoice에는 접근하지 않는다.
+    paths = [r"Software\Classes\Paperlight.PDF\shell\open\command",
+             r"Software\Classes\Paperlight.PDF\shell\open",
+             r"Software\Classes\Paperlight.PDF\shell",
+             r"Software\Classes\Paperlight.PDF\DefaultIcon",
+             r"Software\Classes\Paperlight.PDF",
+             r"Software\Paperlight\Capabilities\FileAssociations",
+             r"Software\Paperlight\Capabilities"]
+    for path in paths:
+        try:
+            winreg.DeleteKeyEx(winreg.HKEY_CURRENT_USER, path, winreg.KEY_WOW64_64KEY)
+        except FileNotFoundError:
+            pass
+    for path, name in ((r"Software\Classes\.pdf\OpenWithProgids", "Paperlight.PDF"),
+                       (r"Software\RegisteredApplications", "Folio")):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, path, 0,
+                                winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY) as key:
+                winreg.DeleteValue(key, name)
+        except FileNotFoundError:
+            pass
+    ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)

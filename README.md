@@ -6,9 +6,9 @@ Windows에서 개인과 내부 팀이 쓰는 오프라인 PDF 뷰어·편집기�
 
 ## 실행
 
-**설치판:** `Folio-0.10.0-Setup.exe`를 실행한 뒤 시작 메뉴에서 Folio를 여세요. Windows 10/11 64비트용이며 관리자 권한과 Python 설치가 필요하지 않습니다.
+**설치판:** 0.11.0부터 `Folio-win-Setup.exe`를 실행한 뒤 시작 메뉴에서 Folio를 여세요. Windows 10/11 64비트용이며 관리자 권한과 Python 설치가 필요하지 않습니다.
 
-**포터블:** `Folio-0.10.0-Portable.zip`을 풀고 폴더 안 `Folio.exe`를 실행하세요. 폴더 전체를 함께 보관해야 합니다. `시작하기.pdf`로 기능을 확인할 수 있습니다. 설치·업데이트·제거 방법은 [팀 배포 안내](docs/배포.md)를 참고하세요.
+**포터블:** `Folio-0.11.0-Portable.zip`을 풀고 폴더 안 `Folio.exe`를 실행하세요. 폴더 전체를 함께 보관해야 합니다. `시작하기.pdf`로 기능을 확인할 수 있습니다. 설치·업데이트·제거 방법은 [팀 배포 안내](docs/배포.md)를 참고하세요.
 
 - 파일 열기 또는 PDF 드래그 앤 드롭. PDF 경로를 실행 인수로 전달할 수도 있습니다.
 - 보기: 페이지 썸네일, 검색, 확대·축소, 너비 맞춤. Ctrl+휠로 확대하고 페이지 끝에서 휠을 굴리면 다음 페이지로 이동합니다.
@@ -26,6 +26,14 @@ Windows에서 개인과 내부 팀이 쓰는 오프라인 PDF 뷰어·편집기�
 - 페이지·도구·선택을 바꿀 때 미적용 입력이 있으면 적용/버리기/취소를 선택합니다. 같은 본문을 다시 클릭해도 입력이 유지됩니다.
 - 문서 전체 실행 취소/다시 실행: Ctrl+Z / Ctrl+Shift+Z. 텍스트 입력 칸에 포커스가 있으면 입력 내용의 실행 취소가 우선합니다.
 - Ctrl+O 열기, Ctrl+S / Ctrl+Shift+S 다른 이름으로 저장, Ctrl+F 검색, Escape 선택 취소.
+
+## 자동 업데이트 (0.11.0부터)
+
+설치판은 시작할 때 공개 저장소 [shuuuno/folio의 GitHub Releases](https://github.com/shuuuno/folio/releases)에서 안정 버전을 확인하고 새 버전을 백그라운드로 다운로드합니다. **더보기 → 업데이트 … 설치 및 재시작**에서 적용합니다. 다운로드가 끝나면 창이 보이는 경우 재시작 여부를 안내하며, 나중에 적용할 수도 있습니다. 미저장 문서·미적용 입력은 기존 종료 확인을 거치고 취소하면 그대로 유지됩니다. 변환 중에는 재시작하지 않습니다. 오프라인·서버 오류·검증 실패 시 편집을 계속하며 메뉴에서 재시도할 수 있습니다.
+
+문서·서명·설정·PDF 경로는 보내지 않습니다. 업데이트 확인과 패키지 다운로드에만 인터넷을 사용하며 GitHub에 일반 네트워크 요청 정보가 전달됩니다. 개발 실행과 포터블은 자동 업데이트를 하지 않습니다. 첫 공개 Release가 게시되기 전에는 업데이트를 받을 수 없습니다.
+
+**0.10.x 이하 NSIS 설치판:** 모든 작업을 저장하고 트레이의 **완전히 종료**를 누른 뒤 Windows에서 기존 Folio/Paperlight를 제거하고 새 설치판을 한 번 설치하세요. 기존 설치 폴더의 사용자 문서는 먼저 다른 곳에 보관하세요. `%LOCALAPPDATA%\Paperlight\Paperlight`의 설정·서명·복구본은 유지합니다. 새 기본 설치 위치는 `%LOCALAPPDATA%\Folio`이며, PDF 기본 앱은 Windows 설정에서 다시 확인하세요. UserChoice/Hash는 직접 변경하지 않습니다.
 
 ## 화면 구성 (0.10.0)
 
@@ -94,7 +102,27 @@ python -m venv .venv
 .\.venv\Scripts\python.exe scripts\build.py
 ```
 
-`paperlight/document.py`는 트랜잭션·본문 교체·저장을, `window.py`는 Qt Widgets 화면과 좌표 변환을 담당합니다. `signature.py`는 손그림·서명 재사용을 담당합니다. 서버, 브라우저 런타임, 원격 API가 없습니다. 큰 문서는 현재 페이지와 보이는 썸네일만 렌더링하지만 편집 이력은 PDF 복사본을 보관하므로 큰 스캔본을 많이 수정하면 메모리 사용량이 늘 수 있습니다.
+`paperlight/document.py`는 트랜잭션·본문 교체·저장을, `window.py`는 Qt Widgets 화면과 좌표 변환을 담당합니다. `signature.py`는 손그림·서명 재사용을 담당합니다. `updates.py`는 설치판의 업데이트만 담당하며 문서 처리는 로컬에서 수행합니다. 큰 문서는 현재 페이지와 보이는 썸네일만 렌더링하지만 편집 이력은 PDF 복사본을 보관하므로 큰 스캔본을 많이 수정하면 메모리 사용량이 늘 수 있습니다.
+
+### 버전 올리기 · 빌드 · pack · 게시
+
+빌드 PC에는 Python 3.13 x64와 .NET 10 SDK, 앱과 같은 버전의 `vpk`가 필요합니다. 일반 사용자의 PC에는 필요하지 않습니다. [Velopack Python 공식 안내](https://docs.velopack.io/getting-started/python)에 맞춰 PyInstaller `--onedir`로 빌드합니다.
+
+```powershell
+dotnet tool install --global vpk --version 1.2.161
+.\.venv\Scripts\python.exe scripts\release.py --bump 0.11.1
+# 변경 검토, 테스트, 커밋 후 깨끗한 작업 트리에서
+.\.venv\Scripts\python.exe scripts\release.py
+# 공개 전 전체 이력 검사. 발견 시 공개하지 말고 검토 결과 보고
+git fetch --all --tags
+.\.venv\Scripts\python.exe scripts\scan_publication.py --gitleaks C:\도구\gitleaks.exe
+# 사용자에게 main 반영·푸시와 Release 게시 승인을 받은 뒤에만
+.\.venv\Scripts\python.exe scripts\release.py --publish
+```
+
+기본 명령은 로컬 빌드·pack만 합니다. `release/<버전>/`에 `Folio-win-Setup.exe`, `Folio-<버전>-full.nupkg`, `releases.win.json`, 포터블·소스 ZIP, 해시·커밋 정보를 만듭니다. `--publish`는 현재 커밋과 원격 main, 저장소 공개 상태, 배포물 해시를 확인하고 `gh release`로 자산을 전부 올린 후 공개합니다. 같은 버전의 태그/Release를 덮어쓰지 않습니다. 실패해 draft가 남으면 검토 후 정리하고 다시 게시하세요. Setup EXE와 업데이트 피드를 함께 게시해야 자동 업데이트가 작동합니다.
+
+SDK가 없는 빌드 PC에서는 공식 `vpk.1.2.161.nupkg`를 압축 해제한 뒤 설치된 .NET 10 런타임으로 `--vpk <압축해제경로>\tools\net10.0\any\vpk.dll`을 지정할 수도 있습니다. 스캐너 보고서는 비밀값을 가리고 `evidence/publication-scan/`에 보관합니다. 개인정보 자동 검사는 이메일·휴대폰·주민번호 형식 및 PDF 텍스트를 대상으로 하며 이미지 속 개인정보 등 수동 검토를 대신하지 않습니다.
 
 `research/조사와-설계.md`에 참고 제품 비교, REA 근거, 분석 한계를 기록했습니다. `assets/`에는 합성 예제와 아이콘이 있습니다. 로컬 검증 결과인 `evidence/`는 Git에서 제외합니다. 실제 사용자 문서는 테스트에 사용하지 않았습니다.
 

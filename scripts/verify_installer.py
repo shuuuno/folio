@@ -62,6 +62,9 @@ def run(command, timeout=90):
 
 
 def main():
+    if tuple(map(int, __version__.split("."))) >= (0, 11, 0):
+        from scripts.verify_velopack_installer import main as verify
+        return verify()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--upgrade-from", type=Path, help="이전 Paperlight 설치판에서 업데이트 검증")
     args = parser.parse_args()

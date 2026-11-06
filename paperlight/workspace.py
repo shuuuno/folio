@@ -22,6 +22,7 @@ class Workspace(QMainWindow):
         self.data_dir = data_dir
         self.settings = settings if settings is not None else QSettings()
         self.exiting = False
+        self._update_callback = None
         self.conversion_dialog = None
         self.tabs = DocumentTabs()
         self.tabs.tabBar().tabCloseRequested.connect(self.close_tab)
@@ -88,6 +89,7 @@ class Workspace(QMainWindow):
         self.addAction(close)
         files.addAction("완전히 종료", self.quit_app)
         app_menu = QMenu(self)
+        self.app_menu = app_menu
         options.setMenu(app_menu)
         app_menu.addAction("PDF 기본 앱 설정…", self.open_default_settings)
         self.tray_preference = app_menu.addAction("창을 닫으면 트레이에 유지")
@@ -239,6 +241,13 @@ class Workspace(QMainWindow):
         if not self.close():
             self.exiting = False
 
+    def restart_for_update(self, callback):
+        self._update_callback = callback
+        try:
+            self.quit_app()
+        finally:
+            self._update_callback = None
+
     def closeEvent(self, event):
         if not self.exiting and self.tray_preference.isChecked() and self.tray and self.tray.isVisible():
             self.hide_to_tray()
@@ -257,6 +266,15 @@ class Workspace(QMainWindow):
             if not editor.confirm_discard():
                 self.exiting = False
                 self.reveal()
+                event.ignore()
+                return
+        if self._update_callback:
+            try:
+                self._update_callback()
+            except Exception:
+                self.exiting = False
+                QMessageBox.warning(self, "업데이트 실패",
+                                    "업데이트 적용을 시작하지 못했습니다. 작업을 보존했으니 나중에 다시 시도하세요.")
                 event.ignore()
                 return
         self.exiting = True

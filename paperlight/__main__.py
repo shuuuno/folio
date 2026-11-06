@@ -1,5 +1,10 @@
 import sys
 from pathlib import Path
+
+if getattr(sys, "frozen", False):
+    from .updates import bootstrap
+    bootstrap()
+
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from . import __version__, DISPLAY_NAME
@@ -54,6 +59,8 @@ def main():
         QMessageBox.warning(None, f"{DISPLAY_NAME} 실행", str(exc))
         sys.exit(1)
     window = Workspace()
+    from .updates import attach_updates
+    window.updates = attach_updates(window)
     instance.requested.connect(window.open_files)
     app.aboutToQuit.connect(instance.close)
     window.show()

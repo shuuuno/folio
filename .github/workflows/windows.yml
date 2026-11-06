@@ -25,6 +25,8 @@ jobs:
             throw '맑은 고딕이 설치된 Windows 빌드 환경이 필요합니다.'
           }
       - run: python -m unittest discover -s tests -v
+      - name: Velopack 도구 설치
+        run: dotnet tool install --global vpk --version 1.2.161
       - run: python scripts/release.py
       - run: python scripts/verify_installer.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -6,3 +6,4 @@ python-pptx>=1,<2
 Pillow>=11,<13
 pywin32>=310,<400
 fonttools>=4.68,<5
+velopack==1.2.161
