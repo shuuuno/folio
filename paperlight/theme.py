@@ -5,16 +5,16 @@ import sys
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QPalette
 from PySide6.QtWidgets import QApplication
 
-COLORS = dict(ink="#202A3B", muted="#526078", accent="#3451C8", accent_hover="#2B44AE",
+COLORS = dict(ink="#202A3B", muted="#465772", accent="#3451C8", accent_hover="#2B44AE",
               accent_pressed="#243A96", selected="#E8EDFC", border="#D7DFEA",
-              canvas="#DCE3ED", surface="#FFFFFF", chrome="#F3F6FA", rail="#EBF0F7",
+              canvas="#CCD6E4", surface="#FFFFFF", chrome="#F3F6FA", rail="#E3EBFB",
               window_bar="#E8EDF5", tab_hover="#DCE4F0", hover="#E9EEF6", pressed="#DCE4F0",
               focus="#3451C8", disabled="#929DAF", disabled_primary_bg="#E0E6F2",
               disabled_primary_ink="#7785A2", danger="#A13644", danger_hover="#FCECEF",
-              selection_text="#DCE5FF", selection_ink="#24314C", control_border="#8593A8", border_hover="#63758F",
+              selection_text="#DCE5FF", selection_ink="#24314C", control_border="#7C8BA1", border_hover="#63758F",
               scrollbar="#B7C3D3", tooltip="#253249", close_hover="#FBDDE0")
-TYPE = dict(body=14, compact=12, label=13, editor=15, introduction=16,
-            title=22, dialog=26, headline=32, wordmark=21)
+TYPE = dict(body=14, compact=12, label=13, editor=16, introduction=18,
+            title=26, group=17, page_heading=20, dialog=28, headline=44, wordmark=21)
 _loaded = False
 
 

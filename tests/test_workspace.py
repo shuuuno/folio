@@ -157,6 +157,32 @@ class WorkspaceTests(unittest.TestCase):
         editor.apply_button.click()
         self.assertIn("담당자: 이서준", editor.model.doc[0].get_text())
 
+    def test_ribbon_fits_laptop_and_search_shortcuts_still_work(self):
+        self.window.open_files([self.a])
+        self.window.resize(960, 640)
+        editor = self.window.current
+        APP.processEvents()
+        positions = []
+        for control in list(editor.mode_buttons.values()) + [editor.undo_button, editor.redo_button,
+                                                              editor.search_box, editor.sidebar_button]:
+            self.assertTrue(editor.ribbon.rect().contains(control.mapTo(editor.ribbon, control.rect().topLeft())))
+            self.assertTrue(editor.ribbon.rect().contains(control.mapTo(editor.ribbon, control.rect().bottomRight())))
+        for button in editor.mode_buttons.values():
+            positions.append(button.mapTo(editor.ribbon, QPoint(0, 0)))
+        self.assertEqual(len({point.y() for point in positions}), 1)
+        self.assertEqual(sorted(point.x() for point in positions), [point.x() for point in positions])
+        editor.view.setFocus()
+        QTest.keyClick(editor.view, Qt.Key.Key_F, Qt.KeyboardModifier.ControlModifier)
+        self.assertTrue(editor.search_box.hasFocus())
+        editor.search_box.setText("담당자")
+        QTest.keyClick(editor.search_box, Qt.Key.Key_Return)
+        self.assertTrue(editor._search_hits)
+        QTest.keyClick(editor.search_box, Qt.Key.Key_F3)
+        self.assertIsNotNone(editor.search_hit)
+        editor.mode_buttons["edit"].click()
+        self.assertEqual(editor.mode, "edit")
+        self.assertTrue(editor.inspector.isVisible())
+
     def test_overflow_tabs_leave_window_controls_accessible(self):
         self.window.resize(1050, 760)
         for index in range(14):

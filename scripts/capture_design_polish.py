@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("phase", choices=("before", "after"))
     parser.add_argument("--scale", default="1")
+    parser.add_argument("--variant", choices=("bolder2",))
     args = parser.parse_args()
     os.environ["QT_QPA_PLATFORM"] = "windows"
     os.environ["QT_SCALE_FACTOR"] = args.scale
@@ -25,7 +26,11 @@ def main():
     import pymupdf as fitz
 
     output = ROOT / "docs/design-polish"
-    evidence = ROOT / "evidence/design-polish" / f"{args.phase}-{args.scale}"
+    evidence_root = ROOT / "evidence/design-polish"
+    if args.variant:
+        output /= args.variant
+        evidence_root /= args.variant
+    evidence = evidence_root / f"{args.phase}-{args.scale}"
     output.mkdir(parents=True, exist_ok=True)
     evidence.mkdir(parents=True, exist_ok=True)
     source = evidence / "시작하기.pdf"
@@ -81,6 +86,11 @@ def main():
             assert editor.inspector.rect().contains(
                 editor.apply_button.mapTo(editor.inspector, editor.apply_button.rect().center()))
             assert editor.view.horizontalScrollBar().maximum() == 0
+            if hasattr(editor, "ribbon"):
+                for control in list(editor.mode_buttons.values()) + [editor.search_box, editor.sidebar_button,
+                                                                     editor.undo_button, editor.redo_button]:
+                    assert editor.ribbon.rect().contains(control.mapTo(editor.ribbon, control.rect().topLeft()))
+                    assert editor.ribbon.rect().contains(control.mapTo(editor.ribbon, control.rect().bottomRight()))
         editor._clear_selection()
         window.resize(1400, 960)
         editor.set_mode("view")
