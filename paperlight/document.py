@@ -185,6 +185,28 @@ class PdfDocument:
         order.insert(target, order.pop(source))
         self._edit(lambda doc: doc.select(order))
 
+    def delete_pages(self, pages):
+        """pages(0부터) 쪽을 지운다. 모든 쪽을 지울 수는 없다. 실행 취소할 수 있다."""
+        count = self.doc.page_count if self.doc else 0
+        pages = sorted(set(pages))
+        if not pages or not all(0 <= n < count for n in pages):
+            raise EditError("지울 쪽이 올바르지 않습니다.")
+        if len(pages) >= count:
+            raise EditError("모든 쪽을 지울 수는 없습니다. 한 쪽 이상 남겨 주세요.")
+        self._edit(lambda doc: doc.delete_pages(pages))
+
+    def rotate_pages(self, pages, angle):
+        """pages(0부터) 쪽을 시계 방향 angle(90의 배수)만큼 돌린다. 실행 취소할 수 있다."""
+        count = self.doc.page_count if self.doc else 0
+        if angle % 90 or not pages or not all(0 <= n < count for n in pages):
+            raise EditError("돌릴 쪽이나 각도가 올바르지 않습니다.")
+
+        def operation(doc):
+            for number in set(pages):
+                page = doc[number]
+                page.set_rotation((page.rotation + angle) % 360)
+        self._edit(operation)
+
     def page_spans(self, number):
         return spans(self.doc[number])
 

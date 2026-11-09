@@ -1013,28 +1013,34 @@ class MainWindow(QMainWindow):
         self.invalidate_search()
         self._rendered_thumbs.clear()
         self._thumbnail_generation += 1
-        self.thumbnails.blockSignals(True)
-        self.thumbnails.clear()
-        for i in range(self.model.doc.page_count):
-            item = QListWidgetItem(str(i + 1))
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            item.setSizeHint(QSize(148, 208))
-            self.thumbnails.addItem(item)
-        self.thumbnails.setCurrentRow(0)
-        self.thumbnails.blockSignals(False)
+        self.fill_page_list()
         self.stack.setCurrentIndex(1)
-        self.page_input.blockSignals(True)
-        self.page_input.setMaximum(self.model.doc.page_count)
-        self.page_input.setValue(1)
-        self.page_input.blockSignals(False)
-        self.pages_title.setText(f"페이지  {self.model.doc.page_count}")
-        self.page_total.setText(f"/ {self.model.doc.page_count}")
         self.set_mode("view")
         self.fit_width()
         self.fit_timer.start(0)
         self.update_state()
         self.schedule_thumbnails()
         self.statusBar().showMessage("글자를 드래그하면 선택, 빈 곳을 드래그하면 이동합니다. Ctrl+C로 복사하세요.", 7000)
+
+    def fill_page_list(self):
+        """페이지 목록·쪽 번호 입력·총 쪽수를 문서 쪽수에 맞춘다. 현재 쪽은 범위 안으로 당긴다."""
+        count = self.model.doc.page_count
+        self.page_number = min(self.page_number, count - 1)
+        self.thumbnails.blockSignals(True)
+        self.thumbnails.clear()
+        for i in range(count):
+            item = QListWidgetItem(str(i + 1))
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item.setSizeHint(QSize(148, 208))
+            self.thumbnails.addItem(item)
+        self.thumbnails.setCurrentRow(self.page_number)
+        self.thumbnails.blockSignals(False)
+        self.page_input.blockSignals(True)
+        self.page_input.setMaximum(count)
+        self.page_input.setValue(self.page_number + 1)
+        self.page_input.blockSignals(False)
+        self.pages_title.setText(f"페이지  {count}")
+        self.page_total.setText(f"/ {count}")
 
     def recovery_state(self):
         draft = None
@@ -1529,6 +1535,9 @@ class MainWindow(QMainWindow):
             return False
 
     def after_edit(self):
+        if self.model.doc and self.thumbnails.count() != self.model.doc.page_count:
+            # 쪽 삭제와 그 실행 취소·다시 실행은 쪽수를 바꾼다. 다시 그리기 전에 현재 쪽을 범위 안으로 당긴다.
+            self.fill_page_list()
         self._clear_selection()
         self.invalidate_search()
         self._thumbnail_generation += 1
@@ -1627,8 +1636,9 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self.error(exc)
             return False
+        self.page_number = target
         self.after_edit()
-        self.go_page(target)
+        self.sync_page_controls()
         self.statusBar().showMessage(f"{source + 1}쪽을 {target + 1}번째로 옮겼습니다 · Ctrl+Z로 되돌리기", 8000)
         return True
 
@@ -1642,8 +1652,72 @@ class MainWindow(QMainWindow):
             action = menu.addAction(text, lambda t=target: self.move_page(row, t))
             action.setEnabled(self.model.editable and 0 <= target <= last and target != row)
         menu.addSeparator()
+        menu.addSeparator()
+        for text, angle in (("오른쪽으로 90° 회전", 90), ("왼쪽으로 90° 회전", -90), ("180° 회전", 180)):
+            action = menu.addAction(text, lambda a=angle: self.rotate_pages([row], a))
+            action.setEnabled(self.model.editable)
+        delete = menu.addAction("이 쪽 삭제", lambda: self.delete_pages([row]))
+        delete.setEnabled(self.model.editable and last > 0)
+        menu.addSeparator()
         menu.addAction("이 쪽 추출…", lambda: self.extract_pages(str(row + 1)))
         menu.exec(self.thumbnails.viewport().mapToGlobal(position))
+
+    def _page_edit(self, operation, message):
+        if not self.model.doc or not self.model.editable or not self.resolve_draft():
+            return False
+        try:
+            operation()
+        except Exception as exc:
+            self.error(exc)
+            return False
+        self.after_edit()
+        self.statusBar().showMessage(message + " · Ctrl+Z로 되돌리기", 8000)
+        return True
+
+    def rotate_pages(self, pages, angle):
+        label = {90: "오른쪽으로 90°", -90: "왼쪽으로 90°", 180: "180°"}[angle]
+        if not self._page_edit(lambda: self.model.rotate_pages(pages, angle), f"{len(pages)}쪽을 {label} 돌렸습니다"):
+            return False
+        if self.fit_mode:
+            self.fit_width()  # 돌린 쪽은 폭이 바뀐다.
+        return True
+
+    def delete_pages(self, pages):
+        return self._page_edit(lambda: self.model.delete_pages(pages), f"{len(set(pages))}쪽을 삭제했습니다")
+
+    def ask_pages(self, title, prompt):
+        count = self.model.doc.page_count
+        text, ok = QInputDialog.getText(self, title, f"{prompt} (전체 {count}쪽)\n예: 1-3, 5, 8-",
+                                        text=str(self.page_number + 1))
+        if not ok:
+            return None
+        try:
+            return parse_page_range(text, count)
+        except EditError as exc:
+            self.error(exc)
+            return None
+
+    def delete_pages_dialog(self):
+        if not self.model.doc:
+            return False
+        if not self.model.editable:
+            QMessageBox.information(self, "페이지 삭제", "읽기 전용 문서는 쪽을 지울 수 없습니다.")
+            return False
+        pages = self.ask_pages("페이지 삭제", "지울 쪽")
+        return pages is not None and self.delete_pages(pages)
+
+    def rotate_pages_dialog(self):
+        if not self.model.doc:
+            return False
+        if not self.model.editable:
+            QMessageBox.information(self, "페이지 회전", "읽기 전용 문서는 쪽을 돌릴 수 없습니다.")
+            return False
+        pages = self.ask_pages("페이지 회전", "돌릴 쪽")
+        if pages is None:
+            return False
+        choices = ["오른쪽으로 90°", "왼쪽으로 90°", "180°"]
+        choice, ok = QInputDialog.getItem(self, "페이지 회전", "방향", choices, 0, False)
+        return ok and self.rotate_pages(pages, {choices[0]: 90, choices[1]: -90, choices[2]: 180}[choice])
 
     def _plain_bytes(self, action):
         """편집 초안까지 반영한 현재 문서 바이트. 암호화·전자서명 문서는 거절한다."""

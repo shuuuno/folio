@@ -90,5 +90,38 @@ class MovePageTest(unittest.TestCase):
             window.close()
 
 
+class DeleteRotateTest(unittest.TestCase):
+    def test_delete_rotate_and_undo(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("A", "B", "C"), "x.pdf")
+        model.rotate_pages([0, 2], 90)
+        model.rotate_pages([0], -90)
+        self.assertEqual([p.rotation for p in model.doc], [0, 0, 90])
+        model.delete_pages([1])
+        self.assertEqual(texts(model.doc), ["A", "C"])
+        with self.assertRaises(EditError):
+            model.delete_pages([0, 1])
+        model.undo()
+        self.assertEqual(texts(model.doc), ["A", "B", "C"])
+
+    def test_window_delete_last_page_then_undo(self):
+        from paperlight.window import MainWindow
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "doc.pdf"
+            path.write_bytes(make_pdf("A", "B", "C"))
+            window = MainWindow()
+            window.open_file(str(path))
+            window.go_page(2)
+            self.assertTrue(window.delete_pages([2]))
+            self.assertEqual((window.thumbnails.count(), window.page_number, window.page_input.maximum()), (2, 1, 2))
+            window.undo()
+            self.assertEqual((window.thumbnails.count(), window.page_number), (3, 1))
+            self.assertEqual(texts(window.model.doc), ["A", "B", "C"])
+            self.assertTrue(window.rotate_pages([1], 180))
+            self.assertEqual(window.model.doc[1].rotation, 180)
+            window.model.saved_revision = window.model.revision
+            window.close()
+
+
 if __name__ == "__main__":
     unittest.main()

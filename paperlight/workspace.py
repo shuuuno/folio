@@ -88,6 +88,8 @@ class Workspace(QMainWindow):
         files.addSeparator()
         files.addAction("페이지 추출…", lambda: self.current.extract_pages())
         files.addAction("PDF 병합…", lambda: self.current.merge_dialog())
+        files.addAction("페이지 회전…", lambda: self.current.rotate_pages_dialog())
+        files.addAction("페이지 삭제…", lambda: self.current.delete_pages_dialog())
         files.addSeparator()
         files.addAction("작업 복구…", lambda: self.current.offer_recovery())
         files.addSeparator()
