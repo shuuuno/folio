@@ -176,6 +176,15 @@ class PdfDocument:
         self.doc = fitz.open(stream=data, filetype="pdf")
         self.revision = revision
 
+    def move_page(self, source, target):
+        """source 쪽을 target 위치로 옮긴다(둘 다 0부터). 실행 취소할 수 있다."""
+        count = self.doc.page_count if self.doc else 0
+        if not (0 <= source < count and 0 <= target < count):
+            raise EditError("옮길 쪽 위치가 올바르지 않습니다.")
+        order = list(range(count))
+        order.insert(target, order.pop(source))
+        self._edit(lambda doc: doc.select(order))
+
     def page_spans(self, number):
         return spans(self.doc[number])
 
@@ -430,3 +439,84 @@ class PdfDocument:
                 os.unlink(temporary)
         self.path = target
         self.saved_revision = self.revision
+
+
+def parse_page_range(text, count):
+    """'1-3, 5, 8-' 형식을 0부터 시작하는 쪽 번호 목록으로 바꾼다. 입력 순서를 지키고 중복은 한 번만 넣는다."""
+    pages = []
+    for part in text.replace(" ", "").split(","):
+        if not part:
+            continue
+        try:
+            if "-" in part:
+                start, end = part.split("-", 1)
+                first, last = int(start or 1), int(end or count)
+            else:
+                first = last = int(part)
+        except ValueError:
+            raise EditError(f"‘{part}’는 쪽 범위로 읽을 수 없습니다. 예: 1-3, 5") from None
+        if not 1 <= first <= last <= count:
+            raise EditError(f"‘{part}’는 1부터 {count}쪽 사이로 지정해 주세요.")
+        pages.extend(n - 1 for n in range(first, last + 1) if n - 1 not in pages)
+    if not pages:
+        raise EditError("추출할 쪽을 입력해 주세요.")
+    return pages
+
+
+def _open_plain(data, label):
+    doc = fitz.open(stream=data, filetype="pdf")
+    # 저장과 같은 정책: 암호를 임의로 풀거나 전자서명을 깨는 사본은 만들지 않는다.
+    if doc.needs_pass or (doc.metadata and doc.metadata.get("encryption")) or doc.get_sigflags() > 0:
+        doc.close()
+        raise EditError(f"‘{label}’은 암호화·전자서명 필드가 있어 추출·병합할 수 없습니다.")
+    if doc.page_count == 0:
+        doc.close()
+        raise EditError(f"‘{label}’에 페이지가 없습니다.")
+    return doc
+
+
+def _write_new(doc, destination):
+    target = Path(destination)
+    fd, temporary = tempfile.mkstemp(prefix=".paperlight-", suffix=".pdf", dir=target.parent)
+    os.close(fd)
+    try:
+        doc.save(temporary, garbage=4, deflate=True, encryption=fitz.PDF_ENCRYPT_NONE)
+        with fitz.open(temporary) as check:
+            if check.page_count != doc.page_count:
+                raise EditError("저장한 PDF의 페이지 수가 일치하지 않습니다.")
+        os.replace(temporary, target)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def extract_pages(data, label, pages, destination):
+    """data(PDF 바이트)에서 pages(0부터) 순서대로 새 PDF를 만든다."""
+    source = _open_plain(data, label)
+    result = fitz.open()
+    try:
+        for number in pages:
+            result.insert_pdf(source, from_page=number, to_page=number)
+        _write_new(result, destination)
+        return result.page_count
+    finally:
+        result.close()
+        source.close()
+
+
+def merge_pdfs(sources, destination):
+    """sources: (표시 이름, PDF 바이트) 목록을 순서대로 이어 새 PDF로 저장한다."""
+    if len(sources) < 2:
+        raise EditError("병합할 PDF를 두 개 이상 넣어 주세요.")
+    result = fitz.open()
+    try:
+        for label, data in sources:
+            source = _open_plain(data, label)
+            try:
+                result.insert_pdf(source)
+            finally:
+                source.close()
+        _write_new(result, destination)
+        return result.page_count
+    finally:
+        result.close()

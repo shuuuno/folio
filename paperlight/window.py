@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, Q
 
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QAbstractPrintDialog
 
-from .document import PdfDocument, EditError, rgb
+from .document import PdfDocument, EditError, rgb, parse_page_range, extract_pages, merge_pdfs
 from .signature import SignatureDialog
 from .style import STYLE
 from .icons import icon
@@ -380,6 +380,101 @@ def print_pages(doc, printer, pages, dpi=300):
         painter.end()
 
 
+class PageList(QListWidget):
+    """쪽 미리보기 목록. 끌어 놓으면 뷰가 직접 옮기지 않고 (원래 위치, 놓은 위치)만 알린다."""
+    move_requested = Signal(int, int)
+
+    def __init__(self):
+        super().__init__()
+        self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+
+    def dragEnterEvent(self, event):
+        event.acceptProposedAction() if event.source() is self else event.ignore()
+
+    def dragMoveEvent(self, event):
+        event.acceptProposedAction() if event.source() is self else event.ignore()
+
+    def dropEvent(self, event):
+        if event.source() is not self:
+            event.ignore()
+            return
+        source = self.currentRow()
+        index = self.indexAt(event.position().toPoint())
+        target = index.row() if index.isValid() else self.count() - 1
+        event.setDropAction(Qt.DropAction.IgnoreAction)  # 목록은 문서를 다시 그릴 때 갱신한다.
+        event.accept()
+        if source >= 0 and target != source:
+            self.move_requested.emit(source, target)
+
+
+class MergeDialog(QDialog):
+    """병합할 PDF 목록과 순서를 정한다. 항목마다 (표시 이름, 파일 경로 또는 PDF 바이트)를 담는다."""
+    def __init__(self, parent, initial=()):
+        super().__init__(parent)
+        self.setWindowTitle("PDF 병합")
+        self.setMinimumSize(520, 380)
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("위에서부터 순서대로 이어 붙입니다. 끌어서 순서를 바꿀 수 있습니다."))
+        self.list = QListWidget()
+        self.list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        layout.addWidget(self.list, 1)
+        for label, source in initial:
+            self.add_item(label, source)
+        row = QHBoxLayout()
+        for text, callback in (("PDF 추가…", self.add_files), ("위로", lambda: self.shift(-1)),
+                               ("아래로", lambda: self.shift(1)), ("빼기", self.remove)):
+            button = QPushButton(text)
+            button.clicked.connect(callback)
+            row.addWidget(button)
+        row.addStretch()
+        self.merge_button = QPushButton("병합해 저장…")
+        self.merge_button.setObjectName("primary")
+        self.merge_button.clicked.connect(self.accept)
+        cancel = QPushButton("취소")
+        cancel.clicked.connect(self.reject)
+        row.addWidget(cancel)
+        row.addWidget(self.merge_button)
+        layout.addLayout(row)
+        self.list.model().rowsInserted.connect(self.sync)
+        self.list.model().rowsRemoved.connect(self.sync)
+        self.sync()
+
+    def add_item(self, label, source):
+        item = QListWidgetItem(label)
+        item.setData(Qt.ItemDataRole.UserRole, source)
+        self.list.addItem(item)
+
+    def add_files(self):
+        paths, _ = QFileDialog.getOpenFileNames(self, "병합할 PDF 추가", "", "PDF 문서 (*.pdf)")
+        for path in paths:
+            self.add_item(Path(path).name, Path(path))
+
+    def shift(self, delta):
+        row = self.list.currentRow()
+        target = row + delta
+        if row < 0 or not 0 <= target < self.list.count():
+            return
+        self.list.insertItem(target, self.list.takeItem(row))
+        self.list.setCurrentRow(target)
+
+    def remove(self):
+        if self.list.currentRow() >= 0:
+            self.list.takeItem(self.list.currentRow())
+
+    def sync(self, *args):
+        self.merge_button.setEnabled(self.list.count() >= 2)
+
+    def sources(self):
+        result = []
+        for i in range(self.list.count()):
+            item = self.list.item(i)
+            source = item.data(Qt.ItemDataRole.UserRole)
+            result.append((item.text(), source.read_bytes() if isinstance(source, Path) else source))
+        return result
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -642,7 +737,10 @@ class MainWindow(QMainWindow):
         self.pages_title = QLabel("페이지")
         self.pages_title.setObjectName("pagesTitle")
         side_layout.addWidget(self.pages_title)
-        self.thumbnails = QListWidget()
+        self.thumbnails = PageList()
+        self.thumbnails.move_requested.connect(self.move_page)
+        self.thumbnails.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.thumbnails.customContextMenuRequested.connect(self.page_menu)
         self.thumbnails.setObjectName("thumbnails")
         self.thumbnails.setIconSize(QSize(112, 146))
         self.thumbnails.setViewMode(QListWidget.ViewMode.IconMode)
@@ -1521,8 +1619,103 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"인쇄를 보냈습니다 · {len(pages)}쪽", 15000)
         return True
 
+    def move_page(self, source, target):
+        if not self.model.doc or not self.model.editable or not self.resolve_draft():
+            return False
+        try:
+            self.model.move_page(source, target)
+        except Exception as exc:
+            self.error(exc)
+            return False
+        self.after_edit()
+        self.go_page(target)
+        self.statusBar().showMessage(f"{source + 1}쪽을 {target + 1}번째로 옮겼습니다 · Ctrl+Z로 되돌리기", 8000)
+        return True
+
+    def page_menu(self, position):
+        index = self.thumbnails.indexAt(position)
+        if not index.isValid() or not self.model.doc:
+            return
+        row, last = index.row(), self.model.doc.page_count - 1
+        menu = QMenu(self)
+        for text, target in (("맨 앞으로", 0), ("앞으로 한 칸", row - 1), ("뒤로 한 칸", row + 1), ("맨 뒤로", last)):
+            action = menu.addAction(text, lambda t=target: self.move_page(row, t))
+            action.setEnabled(self.model.editable and 0 <= target <= last and target != row)
+        menu.addSeparator()
+        menu.addAction("이 쪽 추출…", lambda: self.extract_pages(str(row + 1)))
+        menu.exec(self.thumbnails.viewport().mapToGlobal(position))
+
+    def _plain_bytes(self, action):
+        """편집 초안까지 반영한 현재 문서 바이트. 암호화·전자서명 문서는 거절한다."""
+        if not self.model.doc:
+            return None
+        if self.model.encrypted or self.model.signed:
+            QMessageBox.information(self, action, "암호화·전자서명 필드가 있는 PDF는 추출·병합할 수 없습니다.")
+            return None
+        if self.has_draft and not self.apply_edit():
+            return None
+        return self.model._bytes()
+
+    def extract_pages(self, preset=None):
+        if not self.model.doc:
+            return False
+        count = self.model.doc.page_count
+        text, ok = QInputDialog.getText(self, "페이지 추출",
+                                        f"새 PDF로 꺼낼 쪽 (전체 {count}쪽)\n예: 1-3, 5, 8-",
+                                        text=preset or str(self.page_number + 1))
+        if not ok:
+            return False
+        try:
+            pages = parse_page_range(text, count)
+        except EditError as exc:
+            self.error(exc)
+            return False
+        data = self._plain_bytes("페이지 추출")
+        if data is None:
+            return False
+        source = self.model.path
+        path, _ = QFileDialog.getSaveFileName(self, "추출한 쪽 저장", str(source.with_name(f"{source.stem}_추출.pdf")),
+                                              "PDF 문서 (*.pdf)")
+        if not path:
+            return False
+        if not path.lower().endswith(".pdf"):
+            path += ".pdf"
+        try:
+            written = extract_pages(data, source.name, pages, path)
+        except Exception as exc:
+            self.error(exc)
+            return False
+        self.statusBar().showMessage(f"{written}쪽 추출 완료 · {path}", 15000)
+        return True
+
+    def merge_dialog(self):
+        initial = []
+        if self.model.doc:
+            data = self._plain_bytes("PDF 병합")
+            if data is None:
+                return False
+            initial.append((f"{self.model.path.name} (현재 문서)", data))
+        dialog = MergeDialog(self, initial)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+        base = self.model.path if self.model.doc else Path.home() / "문서.pdf"
+        path, _ = QFileDialog.getSaveFileName(self, "병합한 PDF 저장", str(base.with_name(f"{base.stem}_병합.pdf")),
+                                              "PDF 문서 (*.pdf)")
+        if not path:
+            return False
+        if not path.lower().endswith(".pdf"):
+            path += ".pdf"
+        try:
+            written = merge_pdfs(dialog.sources(), path)
+        except Exception as exc:
+            self.error(exc)
+            return False
+        self.statusBar().showMessage(f"{dialog.list.count()}개 PDF, {written}쪽 병합 완료 · {path}", 15000)
+        return True
+
     def update_state(self):
         opened = self.model.doc is not None
+        self.thumbnails.setDragEnabled(opened and self.model.editable)
         for control in self.document_controls + [self.page_input]:
             control.setEnabled(opened)
         self.previous_page.setEnabled(opened and self.page_number > 0)
