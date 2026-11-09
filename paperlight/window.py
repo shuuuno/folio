@@ -10,13 +10,15 @@ from dataclasses import asdict
 import pymupdf as fitz
 from PySide6.QtCore import Qt, QRectF, QSize, Signal, QTimer, QStandardPaths, QSettings
 from PySide6.QtGui import (QPixmap, QImage, QColor, QPen, QBrush, QPainter, QKeySequence,
-                          QAction, QIcon, QFontDatabase)
+                          QAction, QIcon, QFontDatabase, QPageLayout)
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem,
     QStackedWidget, QListWidget, QListWidgetItem, QAbstractItemView, QSplitter,
     QDoubleSpinBox, QSpinBox, QTextEdit, QLineEdit, QFileDialog, QComboBox,
     QMessageBox, QInputDialog, QColorDialog, QButtonGroup, QDialog, QApplication, QMenu,
     QToolButton, QGraphicsDropShadowEffect, QGridLayout, QScrollArea, QSizePolicy, QFrame)
+
+from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QAbstractPrintDialog
 
 from .document import PdfDocument, EditError, rgb
 from .signature import SignatureDialog
@@ -349,6 +351,33 @@ class PageView(QGraphicsView):
         super().resizeEvent(event)
         if getattr(self.owner, "fit_mode", False) and hasattr(self.owner, "fit_timer"):
             self.owner.fit_timer.start(100)
+
+
+def print_pages(doc, printer, pages, dpi=300):
+    """각 쪽을 래스터로 그려 용지에 비율을 지켜 가운데 맞춘다. 쪽마다 용지 방향을 맞춘다."""
+    painter = QPainter()
+    pages = list(pages)
+    for index, number in enumerate(pages):
+        page = doc[number]
+        landscape = page.rect.width > page.rect.height
+        orientation = (QPageLayout.Orientation.Landscape if landscape else QPageLayout.Orientation.Portrait)
+        printer.setPageOrientation(orientation)
+        if index == 0:
+            if not painter.begin(printer):
+                raise EditError("프린터를 시작하지 못했습니다.")
+        else:
+            printer.newPage()
+        pix = page.get_pixmap(dpi=min(dpi, max(printer.resolution(), 150)), annots=True)
+        image = QImage(pix.samples, pix.width, pix.height, pix.stride, QImage.Format.Format_RGB888)
+        area = painter.viewport()
+        scale = min(area.width() / image.width(), area.height() / image.height())
+        width, height = image.width() * scale, image.height() * scale
+        painter.setViewport(area)
+        painter.setWindow(area)
+        painter.drawImage(QRectF(area.x() + (area.width() - width) / 2, area.y() + (area.height() - height) / 2,
+                                 width, height), image)
+    if painter.isActive():
+        painter.end()
 
 
 class MainWindow(QMainWindow):
@@ -833,7 +862,8 @@ class MainWindow(QMainWindow):
         self.draft_changed()
 
     def bind_shortcuts(self):
-        for keys, callback in [("Ctrl+O", self.open_dialog), ("Ctrl+Shift+S", self.save_as),
+        for keys, callback in [("Ctrl+O", self.open_dialog), ("Ctrl+P", self.print_document),
+                               ("Ctrl+Shift+S", self.save_as),
                                ("Ctrl+S", self.save_as), ("Ctrl+Z", self.undo),
                                ("Ctrl+Shift+Z", self.redo), ("Ctrl+Y", self.redo),
                                ("Ctrl+F", self.search_box.setFocus), ("F3", lambda: self.search(1)),
@@ -1456,6 +1486,40 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self.error(exc)
             return False
+
+    def print_document(self):
+        if not self.model.doc:
+            return False
+        if self.has_draft and not self.apply_edit():
+            return False
+        doc = self.model.doc
+        if not doc.permissions & fitz.PDF_PERM_PRINT:
+            QMessageBox.information(self, "인쇄", "이 PDF는 작성자가 인쇄를 허용하지 않았습니다.")
+            return False
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setDocName(self.model.path.name)
+        dialog = QPrintDialog(printer, self)
+        dialog.setOption(QAbstractPrintDialog.PrintDialogOption.PrintPageRange, True)
+        dialog.setOption(QAbstractPrintDialog.PrintDialogOption.PrintCurrentPage, True)
+        dialog.setMinMax(1, doc.page_count)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+        if printer.printRange() == QPrinter.PrintRange.PageRange:
+            pages = range(printer.fromPage() - 1, printer.toPage())
+        elif printer.printRange() == QPrinter.PrintRange.CurrentPage:
+            pages = [self.page_number]
+        else:
+            pages = range(doc.page_count)
+        try:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            print_pages(doc, printer, pages)
+        except Exception as exc:
+            self.error(exc)
+            return False
+        finally:
+            QApplication.restoreOverrideCursor()
+        self.statusBar().showMessage(f"인쇄를 보냈습니다 · {len(pages)}쪽", 15000)
+        return True
 
     def update_state(self):
         opened = self.model.doc is not None
