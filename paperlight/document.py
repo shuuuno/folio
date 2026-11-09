@@ -195,6 +195,24 @@ class PdfDocument:
             raise EditError("모든 쪽을 지울 수는 없습니다. 한 쪽 이상 남겨 주세요.")
         self._edit(lambda doc: doc.delete_pages(pages))
 
+    def duplicate_pages(self, pages):
+        """pages(0부터) 쪽마다 바로 뒤에 사본을 넣는다. 실행 취소할 수 있다.
+        copy_page는 내용·리소스를 원본과 공유해 한쪽 객체 편집이 다른 쪽에 번지므로,
+        스냅숏에서 insert_pdf로 독립된 사본을 만든다(추가한 객체도 사본에서 그대로 다시 편집 가능)."""
+        count = self.doc.page_count if self.doc else 0
+        pages = sorted(set(pages))
+        if not pages or not all(0 <= n < count for n in pages):
+            raise EditError("복제할 쪽이 올바르지 않습니다.")
+
+        def operation(doc):
+            snapshot = fitz.open(stream=doc.tobytes(), filetype="pdf")
+            try:
+                for number in reversed(pages):
+                    doc.insert_pdf(snapshot, from_page=number, to_page=number, start_at=number + 1)
+            finally:
+                snapshot.close()
+        self._edit(operation)
+
     def rotate_pages(self, pages, angle):
         """pages(0부터) 쪽을 시계 방향 angle(90의 배수)만큼 돌린다. 실행 취소할 수 있다."""
         count = self.doc.page_count if self.doc else 0

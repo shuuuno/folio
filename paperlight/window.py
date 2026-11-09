@@ -1656,6 +1656,8 @@ class MainWindow(QMainWindow):
         for text, angle in (("오른쪽으로 90° 회전", 90), ("왼쪽으로 90° 회전", -90), ("180° 회전", 180)):
             action = menu.addAction(text, lambda a=angle: self.rotate_pages([row], a))
             action.setEnabled(self.model.editable)
+        duplicate = menu.addAction("이 쪽 복제", lambda: self.duplicate_pages([row]))
+        duplicate.setEnabled(self.model.editable)
         delete = menu.addAction("이 쪽 삭제", lambda: self.delete_pages([row]))
         delete.setEnabled(self.model.editable and last > 0)
         menu.addSeparator()
@@ -1681,6 +1683,22 @@ class MainWindow(QMainWindow):
         if self.fit_mode:
             self.fit_width()  # 돌린 쪽은 폭이 바뀐다.
         return True
+
+    def duplicate_pages(self, pages):
+        if not self._page_edit(lambda: self.model.duplicate_pages(pages), f"{len(set(pages))}쪽을 복제했습니다"):
+            return False
+        if len(pages) == 1:
+            self.go_page(pages[0] + 1)  # 한 쪽 복제는 바로 뒤에 생긴 사본으로 이동
+        return True
+
+    def duplicate_pages_dialog(self):
+        if not self.model.doc:
+            return False
+        if not self.model.editable:
+            QMessageBox.information(self, "페이지 복제", "읽기 전용 문서는 쪽을 복제할 수 없습니다.")
+            return False
+        pages = self.ask_pages("페이지 복제", "복제할 쪽 (각 쪽 바로 뒤에 사본을 넣습니다)")
+        return pages is not None and self.duplicate_pages(pages)
 
     def delete_pages(self, pages):
         return self._page_edit(lambda: self.model.delete_pages(pages), f"{len(set(pages))}쪽을 삭제했습니다")

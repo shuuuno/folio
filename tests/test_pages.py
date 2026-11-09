@@ -123,5 +123,71 @@ class DeleteRotateTest(unittest.TestCase):
             window.close()
 
 
+class DuplicateTest(unittest.TestCase):
+    def test_duplicate_inserts_copies_after_each_page(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("A", "B", "C"), "x.pdf")
+        model.duplicate_pages([2, 0])
+        self.assertEqual(texts(model.doc), ["A", "A", "B", "C", "C"])
+        model.undo()
+        self.assertEqual(texts(model.doc), ["A", "B", "C"])
+
+    def test_copy_keeps_rotation(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("A", "B"), "x.pdf")
+        model.rotate_pages([1], 90)
+        model.duplicate_pages([1])
+        self.assertEqual([p.rotation for p in model.doc], [0, 90, 90])
+
+    def test_placed_objects_stay_independent_and_editable(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("Base"), "x.pdf")
+        model.add_text(0, (72, 200, 300, 240), "Hello")
+        [original] = model.page_objects(0)
+        model.duplicate_pages([0])
+        [copy] = model.page_objects(1)
+        self.assertEqual(copy["id"], original["id"])
+        self.assertEqual(copy["text"], "Hello")
+        model.update_object(0, original["id"], original["rect"], text="Changed")
+        self.assertEqual(model.page_objects(0)[0]["text"], "Changed")
+        self.assertEqual(model.page_objects(1)[0]["text"], "Hello")
+        self.assertIn("Hello", model.doc[1].get_text())
+        model.delete_object(1, copy["id"])
+        self.assertEqual(model.page_objects(1), [])
+        self.assertEqual(model.page_objects(0)[0]["text"], "Changed")
+        self.assertIn("Changed", model.doc[0].get_text())
+        self.assertNotIn("Hello", model.doc[1].get_text())
+
+    def test_saved_copy_reopens_with_editable_objects(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("Base"), "x.pdf")
+        model.add_text(0, (72, 200, 300, 240), "Hello")
+        model.duplicate_pages([0])
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "saved.pdf"
+            model.save(path)
+            reopened = PdfDocument()
+            reopened.open(path)
+            self.assertEqual(reopened.doc.page_count, 2)
+            self.assertEqual([len(reopened.page_objects(n)) for n in range(2)], [1, 1])
+            reopened.doc.close()
+            model.doc.close()
+
+    def test_window_duplicate_moves_to_copy(self):
+        from paperlight.window import MainWindow
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "doc.pdf"
+            path.write_bytes(make_pdf("A", "B"))
+            window = MainWindow()
+            window.open_file(str(path))
+            self.assertTrue(window.duplicate_pages([0]))
+            self.assertEqual(texts(window.model.doc), ["A", "A", "B"])
+            self.assertEqual((window.thumbnails.count(), window.page_number, window.page_input.maximum()), (3, 1, 3))
+            window.undo()
+            self.assertEqual((window.thumbnails.count(), window.page_number), (2, 1))
+            window.model.saved_revision = window.model.revision
+            window.close()
+
+
 if __name__ == "__main__":
     unittest.main()
