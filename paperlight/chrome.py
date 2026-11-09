@@ -1,6 +1,8 @@
 """문서 탭과 창 조작부를 함께 배치하는 Windows 상단 바."""
-from PySide6.QtCore import Qt, QSize, QObject, QEvent
-from PySide6.QtWidgets import QApplication, QWidget, QHBoxLayout, QToolButton, QTabBar, QStackedWidget, QSizePolicy, QMenu, QLabel
+import sys
+
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QTabBar, QStackedWidget, QSizePolicy, QMenu, QLabel
 from .icons import icon
 
 
@@ -145,57 +147,63 @@ class WindowBar(QWidget):
         menu.exec(position or self.mapToGlobal(self.rect().bottomLeft()))
 
 
-def resize_edges(window, pos, margin=6):
-    """창 안 논리 좌표가 가장자리에 걸리면 Qt.Edges, 아니면 빈 값."""
-    edges = Qt.Edge(0)
-    if window.isMaximized() or window.isFullScreen():
-        return edges
-    if pos.x() < margin: edges |= Qt.Edge.LeftEdge
-    elif pos.x() >= window.width() - margin: edges |= Qt.Edge.RightEdge
-    if pos.y() < margin: edges |= Qt.Edge.TopEdge
-    elif pos.y() >= window.height() - margin: edges |= Qt.Edge.BottomEdge
-    return edges
+def enable_native_resize(window):
+    """프레임리스 창에 Windows 크기 조절 프레임(WS_THICKFRAME)을 붙인다. 보이는 테두리는 native_frame_event가 없앤다."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+    hwnd = int(window.winId())
+    user32 = ctypes.windll.user32
+    user32.GetWindowLongW.restype = ctypes.c_long
+    style = user32.GetWindowLongW(hwnd, -16)  # GWL_STYLE
+    if not style & 0x00040000:
+        user32.SetWindowLongW(hwnd, -16, style | 0x00040000)
+    # SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
+    user32.SetWindowPos(hwnd, None, 0, 0, 0, 0, 0x0002 | 0x0001 | 0x0004 | 0x0010 | 0x0020)
 
 
-_EDGE_CURSORS = {
-    Qt.Edge.LeftEdge: Qt.CursorShape.SizeHorCursor, Qt.Edge.RightEdge: Qt.CursorShape.SizeHorCursor,
-    Qt.Edge.TopEdge: Qt.CursorShape.SizeVerCursor, Qt.Edge.BottomEdge: Qt.CursorShape.SizeVerCursor,
-    Qt.Edge.LeftEdge | Qt.Edge.TopEdge: Qt.CursorShape.SizeFDiagCursor,
-    Qt.Edge.RightEdge | Qt.Edge.BottomEdge: Qt.CursorShape.SizeFDiagCursor,
-    Qt.Edge.RightEdge | Qt.Edge.TopEdge: Qt.CursorShape.SizeBDiagCursor,
-    Qt.Edge.LeftEdge | Qt.Edge.BottomEdge: Qt.CursorShape.SizeBDiagCursor,
-}
+def native_frame_event(window, message):
+    """WM_NCCALCSIZE로 프레임을 클라이언트 영역에 흡수하고 WM_NCHITTEST로 가장자리를 알린다."""
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    from ctypes import wintypes
+    msg = wintypes.MSG.from_address(int(message))
+    if msg.message == 0x0083 and msg.wParam:  # WM_NCCALCSIZE
+        if ctypes.windll.user32.IsZoomed(msg.hWnd):
+            # 최대화 시 클라이언트 영역을 모니터 작업 영역(작업 표시줄 제외)에 정확히 맞춘다.
+            class MONITORINFO(ctypes.Structure):
+                _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT),
+                            ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
+            user32 = ctypes.windll.user32
+            user32.MonitorFromWindow.restype = wintypes.HANDLE
+            monitor = user32.MonitorFromWindow(msg.hWnd, 2)  # MONITOR_DEFAULTTONEAREST
+            info = MONITORINFO(cbSize=ctypes.sizeof(MONITORINFO))
+            if user32.GetMonitorInfoW(wintypes.HANDLE(monitor), ctypes.byref(info)):
+                rect = wintypes.RECT.from_address(msg.lParam)
+                rect.left, rect.top, rect.right, rect.bottom = (info.rcWork.left, info.rcWork.top,
+                                                                info.rcWork.right, info.rcWork.bottom)
+        return 0
+    return resize_hit(window, msg)
 
 
-class EdgeResizer(QObject):
-    """프레임리스 창은 Windows 크기 조절 프레임이 없어 가장자리 끌기를 Qt에 직접 맡긴다."""
-    def __init__(self, window):
-        super().__init__(window)
-        self.window = window
-        self.cursor_set = False
-        window.windowHandle().installEventFilter(self)
-
-    def set_cursor(self, edges):
-        shape = _EDGE_CURSORS.get(edges)
-        if shape is not None:
-            if self.cursor_set:
-                QApplication.changeOverrideCursor(shape)
-            else:
-                QApplication.setOverrideCursor(shape)
-                self.cursor_set = True
-        elif self.cursor_set:
-            QApplication.restoreOverrideCursor()
-            self.cursor_set = False
-
-    def eventFilter(self, obj, event):
-        kind = event.type()
-        if kind == QEvent.Type.MouseMove and not event.buttons():
-            self.set_cursor(resize_edges(self.window, event.position()))
-        elif kind == QEvent.Type.Leave:
-            self.set_cursor(Qt.Edge(0))
-        elif kind == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
-            edges = resize_edges(self.window, event.position())
-            if edges != Qt.Edge(0):
-                self.set_cursor(Qt.Edge(0))
-                return obj.startSystemResize(edges)
-        return False
+def resize_hit(window, msg):
+    """가장자리에 있으면 Windows 크기 조절 히트값을 돌려준다. 좌표는 화면 물리 픽셀."""
+    if msg.message != 0x0084 or window.isMaximized() or window.isFullScreen():  # WM_NCHITTEST
+        return None
+    import ctypes
+    from ctypes import wintypes
+    bounds = wintypes.RECT()
+    get_rect = ctypes.windll.user32.GetWindowRect
+    get_rect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+    if not get_rect(msg.hWnd, ctypes.byref(bounds)):
+        return None
+    x, y = ctypes.c_short(msg.lParam & 0xffff).value, ctypes.c_short((msg.lParam >> 16) & 0xffff).value
+    margin = round(6 * window.devicePixelRatioF())
+    left, right = bounds.left <= x < bounds.left + margin, bounds.right - margin <= x < bounds.right
+    top, bottom = bounds.top <= y < bounds.top + margin, bounds.bottom - margin <= y < bounds.bottom
+    if top: return 13 if left else 14 if right else 12
+    if bottom: return 16 if left else 17 if right else 15
+    if left: return 10
+    if right: return 11
+    return None

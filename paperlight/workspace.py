@@ -10,7 +10,7 @@ from .window import MainWindow
 from .style import STYLE
 from .icons import icon
 from .theme import install_theme, COLORS
-from .chrome import DocumentTabs, WindowBar, EdgeResizer
+from .chrome import DocumentTabs, WindowBar, enable_native_resize, native_frame_event
 from . import DISPLAY_NAME
 
 
@@ -123,13 +123,23 @@ class Workspace(QMainWindow):
         system_menu.setShortcut(QKeySequence("Alt+Space"))
         system_menu.triggered.connect(lambda: self.window_bar.show_system_menu())
         self.addAction(system_menu)
-        self.winId()
-        self.edge_resizer = EdgeResizer(self)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        enable_native_resize(self)  # Qt가 표시·재생성 때 창 스타일을 다시 쓰므로 매번 붙인다.
 
     def changeEvent(self, event):
         super().changeEvent(event)
         if event.type() == QEvent.Type.WindowStateChange and hasattr(self, "window_bar"):
             self.window_bar.sync_state()
+            if self.isVisible():
+                enable_native_resize(self)
+
+    def nativeEvent(self, event_type, message):
+        result = native_frame_event(self, message)
+        if result is not None:
+            return True, result
+        return super().nativeEvent(event_type, message)
 
     @property
     def current(self):
