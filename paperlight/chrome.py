@@ -1,8 +1,6 @@
 """문서 탭과 창 조작부를 함께 배치하는 Windows 상단 바."""
-import sys
-
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QTabBar, QStackedWidget, QSizePolicy, QMenu, QLabel
+from PySide6.QtCore import Qt, QSize, QObject, QEvent
+from PySide6.QtWidgets import QApplication, QWidget, QHBoxLayout, QToolButton, QTabBar, QStackedWidget, QSizePolicy, QMenu, QLabel
 from .icons import icon
 
 
@@ -147,26 +145,57 @@ class WindowBar(QWidget):
         menu.exec(position or self.mapToGlobal(self.rect().bottomLeft()))
 
 
-def resize_hit(window, message):
-    """Windows에 가장자리 크기 조절을 맡긴다. 좌표는 화면 물리 픽셀."""
-    if sys.platform != "win32" or window.isMaximized() or window.isFullScreen():
-        return None
-    import ctypes
-    from ctypes import wintypes
-    msg = wintypes.MSG.from_address(int(message))
-    if msg.message != 0x0084:  # WM_NCHITTEST
-        return None
-    bounds = wintypes.RECT()
-    get_rect = ctypes.windll.user32.GetWindowRect
-    get_rect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
-    if not get_rect(msg.hWnd, ctypes.byref(bounds)):
-        return None
-    x, y = ctypes.c_short(msg.lParam & 0xffff).value, ctypes.c_short((msg.lParam >> 16) & 0xffff).value
-    margin = round(6 * window.devicePixelRatioF())
-    left, right = bounds.left <= x < bounds.left + margin, bounds.right - margin <= x < bounds.right
-    top, bottom = bounds.top <= y < bounds.top + margin, bounds.bottom - margin <= y < bounds.bottom
-    if top: return 13 if left else 14 if right else 12
-    if bottom: return 16 if left else 17 if right else 15
-    if left: return 10
-    if right: return 11
-    return None
+def resize_edges(window, pos, margin=6):
+    """창 안 논리 좌표가 가장자리에 걸리면 Qt.Edges, 아니면 빈 값."""
+    edges = Qt.Edge(0)
+    if window.isMaximized() or window.isFullScreen():
+        return edges
+    if pos.x() < margin: edges |= Qt.Edge.LeftEdge
+    elif pos.x() >= window.width() - margin: edges |= Qt.Edge.RightEdge
+    if pos.y() < margin: edges |= Qt.Edge.TopEdge
+    elif pos.y() >= window.height() - margin: edges |= Qt.Edge.BottomEdge
+    return edges
+
+
+_EDGE_CURSORS = {
+    Qt.Edge.LeftEdge: Qt.CursorShape.SizeHorCursor, Qt.Edge.RightEdge: Qt.CursorShape.SizeHorCursor,
+    Qt.Edge.TopEdge: Qt.CursorShape.SizeVerCursor, Qt.Edge.BottomEdge: Qt.CursorShape.SizeVerCursor,
+    Qt.Edge.LeftEdge | Qt.Edge.TopEdge: Qt.CursorShape.SizeFDiagCursor,
+    Qt.Edge.RightEdge | Qt.Edge.BottomEdge: Qt.CursorShape.SizeFDiagCursor,
+    Qt.Edge.RightEdge | Qt.Edge.TopEdge: Qt.CursorShape.SizeBDiagCursor,
+    Qt.Edge.LeftEdge | Qt.Edge.BottomEdge: Qt.CursorShape.SizeBDiagCursor,
+}
+
+
+class EdgeResizer(QObject):
+    """프레임리스 창은 Windows 크기 조절 프레임이 없어 가장자리 끌기를 Qt에 직접 맡긴다."""
+    def __init__(self, window):
+        super().__init__(window)
+        self.window = window
+        self.cursor_set = False
+        window.windowHandle().installEventFilter(self)
+
+    def set_cursor(self, edges):
+        shape = _EDGE_CURSORS.get(edges)
+        if shape is not None:
+            if self.cursor_set:
+                QApplication.changeOverrideCursor(shape)
+            else:
+                QApplication.setOverrideCursor(shape)
+                self.cursor_set = True
+        elif self.cursor_set:
+            QApplication.restoreOverrideCursor()
+            self.cursor_set = False
+
+    def eventFilter(self, obj, event):
+        kind = event.type()
+        if kind == QEvent.Type.MouseMove and not event.buttons():
+            self.set_cursor(resize_edges(self.window, event.position()))
+        elif kind == QEvent.Type.Leave:
+            self.set_cursor(Qt.Edge(0))
+        elif kind == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+            edges = resize_edges(self.window, event.position())
+            if edges != Qt.Edge(0):
+                self.set_cursor(Qt.Edge(0))
+                return obj.startSystemResize(edges)
+        return False

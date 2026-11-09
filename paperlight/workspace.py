@@ -10,7 +10,7 @@ from .window import MainWindow
 from .style import STYLE
 from .icons import icon
 from .theme import install_theme, COLORS
-from .chrome import DocumentTabs, WindowBar, resize_hit
+from .chrome import DocumentTabs, WindowBar, EdgeResizer
 from . import DISPLAY_NAME
 
 
@@ -123,17 +123,13 @@ class Workspace(QMainWindow):
         system_menu.setShortcut(QKeySequence("Alt+Space"))
         system_menu.triggered.connect(lambda: self.window_bar.show_system_menu())
         self.addAction(system_menu)
+        self.winId()
+        self.edge_resizer = EdgeResizer(self)
 
     def changeEvent(self, event):
         super().changeEvent(event)
         if event.type() == QEvent.Type.WindowStateChange and hasattr(self, "window_bar"):
             self.window_bar.sync_state()
-
-    def nativeEvent(self, event_type, message):
-        hit = resize_hit(self, message)
-        if hit is not None:
-            return True, hit
-        return super().nativeEvent(event_type, message)
 
     @property
     def current(self):
