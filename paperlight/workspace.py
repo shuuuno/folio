@@ -88,6 +88,8 @@ class Workspace(QMainWindow):
         files.addSeparator()
         files.addAction("페이지 추출…", lambda: self.current.extract_pages())
         files.addAction("PDF 병합…", lambda: self.current.merge_dialog())
+        files.addAction("빈 쪽 삽입…", lambda: self.current.insert_blank_dialog())
+        files.addAction("다른 PDF에서 쪽 삽입…", lambda: self.current.insert_from_pdf_dialog())
         files.addAction("페이지 복제…", lambda: self.current.duplicate_pages_dialog())
         files.addAction("페이지 회전…", lambda: self.current.rotate_pages_dialog())
         files.addAction("페이지 삭제…", lambda: self.current.delete_pages_dialog())

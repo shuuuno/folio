@@ -189,5 +189,71 @@ class DuplicateTest(unittest.TestCase):
             window.close()
 
 
+class InsertTest(unittest.TestCase):
+    def test_insert_blank_at_front_middle_end(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("A", "B"), "x.pdf")
+        model.insert_blank_page(0, 300, 400)
+        model.insert_blank_page(2, 595, 842)
+        model.insert_blank_page(4, 842, 595)
+        self.assertEqual(texts(model.doc), ["", "A", "", "B", ""])
+        self.assertEqual([(round(p.rect.width), round(p.rect.height)) for p in model.doc][::2],
+                         [(300, 400), (595, 842), (842, 595)])
+        with self.assertRaises(EditError):
+            model.insert_blank_page(6, 595, 842)
+        model.undo()
+        self.assertEqual(model.doc.page_count, 4)
+
+    def test_insert_pages_from_other_pdf_in_given_order(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("A", "B"), "x.pdf")
+        self.assertEqual(model.insert_pages_from(make_pdf("X1", "X2", "X3"), "o.pdf", [2, 0], 1), 2)
+        self.assertEqual(texts(model.doc), ["A", "X3", "X1", "B"])
+        model.insert_pages_from(make_pdf("Z"), "z.pdf", [0], 4)
+        self.assertEqual(texts(model.doc)[-1], "Z")
+        model.undo()
+        model.undo()
+        self.assertEqual(texts(model.doc), ["A", "B"])
+
+    def test_insert_refuses_encrypted_source_and_keeps_document(self):
+        model = PdfDocument()
+        model.open_bytes(make_pdf("A"), "x.pdf")
+        doc = fitz.open(stream=make_pdf("L"), filetype="pdf")
+        locked = doc.tobytes(encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw="o", user_pw="u")
+        with self.assertRaises(EditError):
+            model.insert_pages_from(locked, "locked.pdf", [0], 0)
+        self.assertEqual(texts(model.doc), ["A"])
+        self.assertFalse(model.can_undo)
+
+    def test_window_insert_blank_and_from_pdf(self):
+        from unittest.mock import patch
+        from PySide6.QtWidgets import QInputDialog, QFileDialog
+        from paperlight.window import MainWindow
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "doc.pdf"
+            other = Path(folder) / "other.pdf"
+            landscape = fitz.open()
+            landscape.new_page(width=842, height=595).insert_text((72, 72), "A")
+            landscape.new_page().insert_text((72, 72), "B")
+            landscape.save(path)
+            other.write_bytes(make_pdf("X1", "X2"))
+            window = MainWindow()
+            window.open_file(str(path))
+            self.assertTrue(window.insert_blank(1, reference=0))
+            self.assertEqual((window.thumbnails.count(), window.page_number), (3, 1))
+            self.assertGreater(window.model.doc[1].rect.width, window.model.doc[1].rect.height)
+            with patch.object(QFileDialog, "getOpenFileName", return_value=(str(other), "")), \
+                 patch.object(QInputDialog, "getText", return_value=("2", True)), \
+                 patch.object(QInputDialog, "getItem", return_value=("맨 앞", True)):
+                self.assertTrue(window.insert_from_pdf_dialog())
+            self.assertEqual(texts(window.model.doc), ["X2", "A", "", "B"])
+            self.assertEqual((window.page_number, window.page_input.maximum()), (0, 4))
+            window.undo()
+            window.undo()
+            self.assertEqual((texts(window.model.doc), window.thumbnails.count()), (["A", "B"], 2))
+            window.model.saved_revision = window.model.revision
+            window.close()
+
+
 if __name__ == "__main__":
     unittest.main()

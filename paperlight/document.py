@@ -213,6 +213,31 @@ class PdfDocument:
                 snapshot.close()
         self._edit(operation)
 
+    def insert_blank_page(self, at, width, height):
+        """at(0부터, 쪽수와 같으면 맨 뒤) 위치에 빈 쪽을 넣는다. 실행 취소할 수 있다."""
+        count = self.doc.page_count if self.doc else 0
+        if not 0 <= at <= count or not (0 < width <= 14400 and 0 < height <= 14400):
+            raise EditError("빈 쪽을 넣을 위치나 크기가 올바르지 않습니다.")
+        self._edit(lambda doc: doc.new_page(pno=at if at < count else -1, width=width, height=height))
+
+    def insert_pages_from(self, data, label, pages, at):
+        """다른 PDF(data)의 pages(0부터)를 입력 순서대로 at 위치부터 끼워 넣는다. 넣은 쪽수를 돌려준다."""
+        count = self.doc.page_count if self.doc else 0
+        if not 0 <= at <= count:
+            raise EditError("쪽을 넣을 위치가 올바르지 않습니다.")
+        source = _open_plain(data, label)
+        try:
+            if not pages or not all(0 <= n < source.page_count for n in pages):
+                raise EditError(f"‘{label}’에서 넣을 쪽이 올바르지 않습니다.")
+
+            def operation(doc):
+                for offset, number in enumerate(pages):
+                    doc.insert_pdf(source, from_page=number, to_page=number, start_at=at + offset)
+            self._edit(operation)
+        finally:
+            source.close()
+        return len(pages)
+
     def rotate_pages(self, pages, angle):
         """pages(0부터) 쪽을 시계 방향 angle(90의 배수)만큼 돌린다. 실행 취소할 수 있다."""
         count = self.doc.page_count if self.doc else 0

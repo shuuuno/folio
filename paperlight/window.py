@@ -20,7 +20,8 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, Q
 
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QAbstractPrintDialog
 
-from .document import PdfDocument, EditError, rgb, parse_page_range, extract_pages, merge_pdfs
+from .document import (PdfDocument, EditError, rgb, parse_page_range, extract_pages, merge_pdfs,
+                       _open_plain as open_plain_pdf)
 from .signature import SignatureDialog
 from .style import STYLE
 from .icons import icon
@@ -1656,6 +1657,11 @@ class MainWindow(QMainWindow):
         for text, angle in (("오른쪽으로 90° 회전", 90), ("왼쪽으로 90° 회전", -90), ("180° 회전", 180)):
             action = menu.addAction(text, lambda a=angle: self.rotate_pages([row], a))
             action.setEnabled(self.model.editable)
+        for text, at in (("앞에 빈 쪽 삽입", row), ("뒤에 빈 쪽 삽입", row + 1)):
+            action = menu.addAction(text, lambda a=at: self.insert_blank(a, row))
+            action.setEnabled(self.model.editable)
+        insert = menu.addAction("다른 PDF에서 쪽 삽입…", lambda: self.insert_from_pdf_dialog(row))
+        insert.setEnabled(self.model.editable)
         duplicate = menu.addAction("이 쪽 복제", lambda: self.duplicate_pages([row]))
         duplicate.setEnabled(self.model.editable)
         delete = menu.addAction("이 쪽 삭제", lambda: self.delete_pages([row]))
@@ -1682,6 +1688,76 @@ class MainWindow(QMainWindow):
             return False
         if self.fit_mode:
             self.fit_width()  # 돌린 쪽은 폭이 바뀐다.
+        return True
+
+    INSERT_POSITIONS = ("현재 쪽 뒤", "현재 쪽 앞", "맨 앞", "맨 뒤")
+
+    def _insert_position(self, title, row):
+        """삽입 위치를 고른다. 돌려주는 값은 0부터 센 삽입 위치, 취소면 None."""
+        choice, ok = QInputDialog.getItem(self, title, f"넣을 위치 (현재 {row + 1}쪽 기준)",
+                                          list(self.INSERT_POSITIONS), 0, False)
+        if not ok:
+            return None
+        return {"현재 쪽 뒤": row + 1, "현재 쪽 앞": row, "맨 앞": 0,
+                "맨 뒤": self.model.doc.page_count}[choice]
+
+    def _check_editable(self, title):
+        if not self.model.doc:
+            return False
+        if not self.model.editable:
+            QMessageBox.information(self, title, "읽기 전용 문서는 쪽을 넣을 수 없습니다.")
+            return False
+        return True
+
+    def insert_blank(self, at, reference=None):
+        """reference 쪽(기본은 현재 쪽)과 같은 크기·방향의 빈 쪽을 at 위치에 넣는다."""
+        if not self._check_editable("빈 쪽 삽입"):
+            return False
+        rect = self.model.doc[self.page_number if reference is None else reference].rect
+        if not self._page_edit(lambda: self.model.insert_blank_page(at, rect.width, rect.height),
+                               f"{at + 1}번째에 빈 쪽을 넣었습니다"):
+            return False
+        self.go_page(at)
+        return True
+
+    def insert_blank_dialog(self):
+        if not self._check_editable("빈 쪽 삽입"):
+            return False
+        at = self._insert_position("빈 쪽 삽입", self.page_number)
+        return at is not None and self.insert_blank(at)
+
+    def insert_from_pdf_dialog(self, row=None):
+        if not self._check_editable("다른 PDF에서 쪽 삽입"):
+            return False
+        row = self.page_number if row is None else row
+        path, _ = QFileDialog.getOpenFileName(self, "쪽을 가져올 PDF", "", "PDF 문서 (*.pdf)")
+        if not path:
+            return False
+        label = Path(path).name
+        try:
+            data = Path(path).read_bytes()
+            probe = open_plain_pdf(data, label)  # 암호화·전자서명 PDF는 여기서 안내하고 멈춘다.
+            count = probe.page_count
+            probe.close()
+        except Exception as exc:
+            self.error(exc)
+            return False
+        text, ok = QInputDialog.getText(self, "다른 PDF에서 쪽 삽입",
+                                        f"‘{label}’에서 넣을 쪽 (전체 {count}쪽)\n예: 1-3, 5, 8-", text="1-")
+        if not ok:
+            return False
+        try:
+            pages = parse_page_range(text, count)
+        except EditError as exc:
+            self.error(exc)
+            return False
+        at = self._insert_position("다른 PDF에서 쪽 삽입", row)
+        if at is None:
+            return False
+        if not self._page_edit(lambda: self.model.insert_pages_from(data, label, pages, at),
+                               f"‘{label}’의 {len(pages)}쪽을 {at + 1}번째부터 넣었습니다"):
+            return False
+        self.go_page(at)
         return True
 
     def duplicate_pages(self, pages):
